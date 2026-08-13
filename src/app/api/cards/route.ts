@@ -1,0 +1,43 @@
+import { getUser } from "@/lib/auth";
+import { createClient } from "@/lib/supabase/server";
+import { createCardSchema } from "@/lib/validation/cards";
+import { error, json } from "@/lib/http";
+
+export async function GET() {
+  const user = await getUser();
+  if (!user) {
+    return error("No autorizado", 401);
+  }
+  const supabase = await createClient();
+  const { data, error: dbError } = await supabase
+    .from("cards")
+    .select("*, people(name)")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: true });
+  if (dbError) {
+    return error(dbError.message, 500);
+  }
+  return json(data ?? []);
+}
+
+export async function POST(request: Request) {
+  const user = await getUser();
+  if (!user) {
+    return error("No autorizado", 401);
+  }
+  const body = await request.json().catch(() => null);
+  const parsed = createCardSchema.safeParse(body);
+  if (!parsed.success) {
+    return error("Datos de tarjeta inválidos", 422);
+  }
+  const supabase = await createClient();
+  const { data, error: dbError } = await supabase
+    .from("cards")
+    .insert({ ...parsed.data, user_id: user.id })
+    .select()
+    .single();
+  if (dbError) {
+    return error(dbError.message, 500);
+  }
+  return json(data, 201);
+}
