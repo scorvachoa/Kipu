@@ -104,3 +104,15 @@ export async function updateLastSyncAt(
     throw error;
   }
 }
+
+export async function listActiveGmailUserIds(): Promise<string[]> {
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("gmail_connections")
+    .select("user_id")
+    .is("revoked_at", null);
+  if (error) {
+    throw error;
+  }
+  return (data ?? []).map((row) => row.user_id as string);
+}

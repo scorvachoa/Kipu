@@ -70,7 +70,7 @@ npm run telegram:setup # registra el webhook de Telegram contra NEXT_PUBLIC_APP_
 
 ## Despliegue en Vercel
 
-1. Sube el repositorio a GitHub y conéctalo en [Vercel](https://vercel.com/new) (Importa tu repo). Vercel detecta Next.js automáticamente; no hace falta `vercel.json`.
+1. Sube el repositorio a GitHub y conéctalo en [Vercel](https://vercel.com/new) (Importa tu repo). Vercel detecta Next.js automáticamente y usa el `crons` de `vercel.json`.
 2. Completa en **Project → Settings → Environment Variables** todas las variables de `.env.example` con los valores de **producción** (NUNCA uses `.env` local):
    - `NEXT_PUBLIC_APP_URL` = `https://tu-app.vercel.app`
    - `GOOGLE_REDIRECT_URI` = `https://tu-app.vercel.app/api/gmail/callback`
@@ -85,6 +85,10 @@ npm run telegram:setup # registra el webhook de Telegram contra NEXT_PUBLIC_APP_
 5. Aplica las migraciones de `supabase/migrations/` al proyecto Supabase de producción.
 
 > Las variables `NEXT_PUBLIC_*` se inyectan en build; las demás (service role, tokens, secretos) viven solo en el servidor y nunca deben exponerse en el cliente.
+
+### Sincronización automática (Vercel Cron)
+
+`vercel.json` define un cron diario (`0 12 * * *` UTC) que llama a `/api/cron/sync`: sincroniza el Gmail de todos los usuarios conectados automáticamente. En el plan **Hobby** los crons solo pueden ejecutarse **una vez al día**; para más frecuencia (2-3 veces/día) necesitas plan Pro y añadir más horarios a `crons`.
 
 ## Estructura
 
