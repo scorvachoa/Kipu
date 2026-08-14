@@ -65,3 +65,28 @@ export function isTrustedTelegramRequest(
   const header = request.headers.get(TELEGRAM_WEBHOOK_SECRET_HEADER);
   return header === secretToken;
 }
+
+export async function getTelegramBotInfo(): Promise<{
+  username: string;
+  firstName: string;
+} | null> {
+  const response = await fetch(
+    `${TELEGRAM_API}/bot${telegramBotToken()}/getMe`,
+    { method: "GET" },
+  );
+  if (!response.ok) {
+    return null;
+  }
+  const data = (await response.json()) as {
+    ok: boolean;
+    result?: { username?: string; first_name: string };
+  };
+  if (!data.ok || !data.result) {
+    return null;
+  }
+  const { result } = data;
+  return {
+    username: result.username ?? "",
+    firstName: result.first_name,
+  };
+}

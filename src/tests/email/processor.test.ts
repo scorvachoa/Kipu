@@ -11,7 +11,8 @@ import {
 import { buildTransactionRow, runSync } from "@/lib/email/sync";
 import type { SyncEmailsProvider } from "@/lib/email/sync";
 import type { TransactionRepository } from "@/lib/email/repositories";
-import type { MerchantRule } from "@/types/categories";
+import type { CategoryService } from "@/lib/ai/category-service";
+import type { MerchantRule, Category } from "@/types/categories";
 import type { Account, Card } from "@/types/cards";
 import type { NewTransaction } from "@/types/transactions";
 import type { ParsedTransaction } from "@/types/transactions";
@@ -24,6 +25,7 @@ class FakeRepository implements TransactionRepository {
   cards: Card[] = [];
   accounts: Account[] = [];
   rules: MerchantRule[] = [];
+  categories: Category[] = [];
   stored: NewTransaction[] = [];
 
   async listCards() {
@@ -34,6 +36,9 @@ class FakeRepository implements TransactionRepository {
   }
   async listRules() {
     return this.rules;
+  }
+  async listCategories() {
+    return this.categories;
   }
   async existsByGmailMessageId(messageId: string) {
     return this.stored.some((t) => t.gmail_message_id === messageId);
@@ -75,7 +80,7 @@ function makeResources(
   rules: MerchantRule[] = [],
   accounts: Account[] = [],
 ): StaticResources {
-  return { cards, accounts, rules };
+  return { cards, accounts, rules, categories: [] };
 }
 
 function firstParsedOf(email: EmailEnvelope): ParsedTransaction {
@@ -153,6 +158,7 @@ describe("identifyInstrument", () => {
       cards: [],
       accounts: [account],
       rules: [],
+      categories: [],
     });
     expect(instrument.accountId).toBe("acc-3902");
     expect(instrument.cardId).toBeNull();
@@ -214,6 +220,90 @@ describe("resolveTransaction", () => {
     );
     expect(resolved.parsed.transactionType).toBe("payment");
     expect(resolved.parsed.transactionType).not.toBe("purchase");
+  });
+
+  it("usa la IA solo cuando las reglas no dan categoría", async () => {
+    const repo = new FakeRepository();
+    repo.cards = [makeCard({})];
+    const resources: StaticResources = {
+      cards: repo.cards,
+      accounts: [],
+      rules: [marketMaryRule],
+      categories: [
+        {
+          id: "cat-farmacia",
+          user_id: "u1",
+          name: "Farmacia",
+          icon: null,
+          parent_id: null,
+          active: true,
+          created_at: "",
+          updated_at: "",
+        },
+      ],
+    };
+    const calls: string[] = [];
+    const categoryService: CategoryService = {
+      async categorize(merchant) {
+        calls.push(merchant);
+        return "cat-farmacia";
+      },
+    };
+
+    const resolved = await resolveTransaction(
+      firstParsedOf(bcpConsumoEmail),
+      bcpConsumoEmail,
+      repo,
+      resources,
+      categoryService,
+    );
+
+    expect(resolved.categoryId).toBe("cat-alim");
+    expect(calls).toEqual([]);
+  });
+
+  it("asigna categoría por IA cuando no hay regla", async () => {
+    const repo = new FakeRepository();
+    repo.cards = [makeCard({})];
+    const resources = makeResources(repo.cards, []);
+    const categoryService: CategoryService = {
+      async categorize() {
+        return "cat-ia";
+      },
+    };
+
+    const resolved = await resolveTransaction(
+      firstParsedOf(bcpConsumoEmail),
+      bcpConsumoEmail,
+      repo,
+      resources,
+      categoryService,
+    );
+
+    expect(resolved.categoryId).toBe("cat-ia");
+    expect(resolved.status).toBe("confirmed");
+  });
+
+  it("mantiene needs_review si la IA no devuelve categoría", async () => {
+    const repo = new FakeRepository();
+    repo.cards = [makeCard({})];
+    const resources = makeResources(repo.cards, []);
+    const categoryService: CategoryService = {
+      async categorize() {
+        return null;
+      },
+    };
+
+    const resolved = await resolveTransaction(
+      firstParsedOf(bcpConsumoEmail),
+      bcpConsumoEmail,
+      repo,
+      resources,
+      categoryService,
+    );
+
+    expect(resolved.categoryId).toBeNull();
+    expect(resolved.status).toBe("needs_review");
   });
 });
 

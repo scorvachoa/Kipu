@@ -56,6 +56,46 @@ export interface GmailConnectionStatus {
   last_sync_at: string | null;
 }
 
+export interface TelegramConnectionStatus {
+  connected: boolean;
+  telegram_user_id: string | null;
+  notify_new_expenses: boolean;
+  notify_payments: boolean;
+  notify_needs_review: boolean;
+}
+
+export async function getTelegramConnection(
+  supabase: SupabaseClient<Database>,
+  userId: string,
+): Promise<TelegramConnectionStatus> {
+  const { data, error } = await supabase
+    .from("telegram_links")
+    .select(
+      "telegram_user_id, notify_new_expenses, notify_payments, notify_needs_review",
+    )
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (error) {
+    throw error;
+  }
+  if (!data) {
+    return {
+      connected: false,
+      telegram_user_id: null,
+      notify_new_expenses: true,
+      notify_payments: true,
+      notify_needs_review: false,
+    };
+  }
+  return {
+    connected: true,
+    telegram_user_id: data.telegram_user_id,
+    notify_new_expenses: data.notify_new_expenses,
+    notify_payments: data.notify_payments,
+    notify_needs_review: data.notify_needs_review,
+  };
+}
+
 export async function getMonthSummaryRows(
   supabase: SupabaseClient<Database>,
   userId: string,

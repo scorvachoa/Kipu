@@ -5,10 +5,13 @@ export function formatTransactionDate(
   date: string,
   time: string | null,
 ): string {
-  const parsed = parseISO(date);
   if (time) {
-    return format(parsed, "dd/MM/yyyy HH:mm");
+    const parsed = parseISO(`${date}T${time}`);
+    if (!Number.isNaN(parsed.getTime())) {
+      return format(parsed, "dd/MM/yyyy HH:mm");
+    }
   }
+  const parsed = parseISO(date);
   return format(parsed, "dd/MM/yyyy");
 }
 

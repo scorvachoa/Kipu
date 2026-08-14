@@ -9,6 +9,7 @@ import {
   type ResolvedTransaction,
 } from "./processor";
 import type { TransactionRepository } from "./repositories";
+import type { CategoryService } from "@/lib/ai/category-service";
 
 export interface SyncEmailsProvider {
   fetchEmails(): Promise<EmailEnvelope[]>;
@@ -18,6 +19,7 @@ export interface SyncDependencies {
   userId: string;
   repository: TransactionRepository;
   provider: SyncEmailsProvider;
+  categoryService?: CategoryService;
 }
 
 export interface SyncOutcome extends GmailSyncResult {
@@ -39,7 +41,7 @@ function isUniqueViolation(error: unknown): boolean {
 export async function runSync(
   dependencies: SyncDependencies,
 ): Promise<SyncOutcome> {
-  const { userId, repository, provider } = dependencies;
+  const { userId, repository, provider, categoryService } = dependencies;
   const result: SyncOutcome = {
     emailsFound: 0,
     emailsProcessed: 0,
@@ -58,7 +60,7 @@ export async function runSync(
   for (const email of emails) {
     let outcome;
     try {
-      outcome = await processEmail(email, repository, resources);
+      outcome = await processEmail(email, repository, resources, categoryService);
     } catch {
       result.errors += 1;
       continue;

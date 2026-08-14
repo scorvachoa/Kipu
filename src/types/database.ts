@@ -321,6 +321,24 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["oauth_states"]["Insert"]>;
         Relationships: [];
       };
+      telegram_link_codes: {
+        Row: {
+          id: string;
+          code: string;
+          user_id: string;
+          created_at: string;
+          expires_at: string;
+        };
+        Insert: {
+          id?: string;
+          code: string;
+          user_id: string;
+          created_at?: string;
+          expires_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["telegram_link_codes"]["Insert"]>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;

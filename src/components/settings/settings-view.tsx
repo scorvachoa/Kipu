@@ -2,9 +2,13 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Mail, User as UserIcon, Plus, Trash2 } from "lucide-react";
+import { Mail, User as UserIcon, Plus, Trash2, Send } from "lucide-react";
 import { formatLastSync } from "@/lib/format";
-import type { GmailConnectionStatus, Person } from "@/lib/supabase/queries";
+import type {
+  GmailConnectionStatus,
+  Person,
+  TelegramConnectionStatus,
+} from "@/lib/supabase/queries";
 import { SyncButton } from "@/components/dashboard/sync-button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,10 +32,12 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 export function SettingsView({
   userEmail,
   gmail,
+  telegram,
   people,
 }: {
   userEmail: string | null;
   gmail: GmailConnectionStatus;
+  telegram: TelegramConnectionStatus;
   people: Person[];
 }) {
   const router = useRouter();
@@ -41,6 +47,11 @@ export function SettingsView({
   const [error, setError] = useState<string | null>(null);
   const [gmailError, setGmailError] = useState<string | null>(null);
   const [disconnecting, setDisconnecting] = useState(false);
+  const [linkCode, setLinkCode] = useState<string | null>(null);
+  const [botUsername, setBotUsername] = useState<string | null>(null);
+  const [linking, setLinking] = useState(false);
+  const [telegramError, setTelegramError] = useState<string | null>(null);
+  const [disconnectingTelegram, setDisconnectingTelegram] = useState(false);
 
   async function addPerson(e: React.FormEvent) {
     e.preventDefault();
@@ -75,6 +86,54 @@ export function SettingsView({
     router.refresh();
   }
 
+  async function connectTelegram() {
+    setLinking(true);
+    setTelegramError(null);
+    const res = await fetch("/api/telegram/link", { method: "POST" });
+    const body = (await res.json()) as {
+      code?: string;
+      bot_username?: string | null;
+      error?: string;
+    };
+    if (!res.ok) {
+      setTelegramError(body.error ?? "No se pudo generar el código.");
+      setLinking(false);
+      return;
+    }
+    setLinkCode(body.code ?? null);
+    setBotUsername(body.bot_username ?? null);
+    setLinking(false);
+  }
+
+  async function disconnectTelegram() {
+    setDisconnectingTelegram(true);
+    setTelegramError(null);
+    const res = await fetch("/api/telegram/link", { method: "DELETE" });
+    if (!res.ok) {
+      const body = (await res.json()) as { error?: string };
+      setTelegramError(body.error ?? "No se pudo desconectar.");
+      setDisconnectingTelegram(false);
+      return;
+    }
+    setLinkCode(null);
+    router.refresh();
+  }
+
+  async function updateTelegramPref(key: string, value: boolean) {
+    setTelegramError(null);
+    const res = await fetch("/api/telegram/link", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ [key]: value }),
+    });
+    if (!res.ok) {
+      const body = (await res.json()) as { error?: string };
+      setTelegramError(body.error ?? "No se pudieron guardar preferencias.");
+      return;
+    }
+    router.refresh();
+  }
+
   async function deletePerson(id: string) {
     setError(null);
     const res = await fetch(`/api/people/${id}`, { method: "DELETE" });
@@ -87,6 +146,7 @@ export function SettingsView({
   }
 
   const lastSync = formatLastSync(gmail.last_sync_at);
+  const botHandle = botUsername ? `@${botUsername}` : "el bot";
 
   return (
     <div className="space-y-4">
@@ -154,6 +214,97 @@ export function SettingsView({
           {gmailError ? (
             <Alert variant="destructive">
               <AlertDescription>{gmailError}</AlertDescription>
+            </Alert>
+          ) : null}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Telegram</CardTitle>
+          <CardDescription>
+            Consulta y notificaciones de tus movimientos
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {telegram.connected ? (
+            <>
+              <p className="flex items-center gap-2 text-sm">
+                <Send className="h-4 w-4 text-muted-foreground" />
+                Vinculado
+                <Badge variant="default">Conectado</Badge>
+              </p>
+              <label className="flex items-center justify-between gap-2 text-sm">
+                Notificar nuevos gastos
+                <input
+                  type="checkbox"
+                  checked={telegram.notify_new_expenses}
+                  onChange={(e) =>
+                    updateTelegramPref("notify_new_expenses", e.target.checked)
+                  }
+                />
+              </label>
+              <label className="flex items-center justify-between gap-2 text-sm">
+                Notificar pagos
+                <input
+                  type="checkbox"
+                  checked={telegram.notify_payments}
+                  onChange={(e) =>
+                    updateTelegramPref("notify_payments", e.target.checked)
+                  }
+                />
+              </label>
+              <label className="flex items-center justify-between gap-2 text-sm">
+                Notificar transacciones que requieren revisión
+                <input
+                  type="checkbox"
+                  checked={telegram.notify_needs_review}
+                  onChange={(e) =>
+                    updateTelegramPref(
+                      "notify_needs_review",
+                      e.target.checked,
+                    )
+                  }
+                />
+              </label>
+              <Button
+                variant="ghost"
+                onClick={disconnectTelegram}
+                disabled={disconnectingTelegram}
+              >
+                {disconnectingTelegram ? "Desconectando…" : "Desconectar"}
+              </Button>
+            </>
+          ) : linkCode ? (
+            <>
+              <p className="text-sm text-muted-foreground">
+                Abre {botHandle} en Telegram y envía este código:
+              </p>
+              <p className="rounded-md bg-muted px-3 py-2 font-mono text-sm">
+                /start {linkCode}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                El código expira en 10 minutos y solo se puede usar una vez.
+              </p>
+              <Button onClick={() => router.refresh()} variant="outline">
+                Ya lo vinculé
+              </Button>
+            </>
+          ) : (
+            <>
+              <p className="text-sm text-muted-foreground">
+                Vincula tu Telegram para recibir notificaciones y consultar tu
+                resumen, gastos y tarjetas desde el chat.
+              </p>
+              <Button onClick={connectTelegram} disabled={linking}>
+                <Send className="h-4 w-4" />
+                {linking ? "Generando código…" : "Conectar Telegram"}
+              </Button>
+            </>
+          )}
+          {telegramError ? (
+            <Alert variant="destructive">
+              <AlertDescription>{telegramError}</AlertDescription>
             </Alert>
           ) : null}
         </CardContent>

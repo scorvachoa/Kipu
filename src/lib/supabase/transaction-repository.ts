@@ -2,7 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
 import type { TransactionRepository } from "@/lib/email/repositories";
 import type { Account, Card } from "@/types/cards";
-import type { MerchantRule } from "@/types/categories";
+import type { Category, MerchantRule } from "@/types/categories";
 
 export function createTransactionRepository(
   client: SupabaseClient<Database>,
@@ -40,6 +40,17 @@ export function createTransactionRepository(
         throw error;
       }
       return (data ?? []) as MerchantRule[];
+    },
+
+    async listCategories() {
+      const { data, error } = await client
+        .from("categories")
+        .select("*")
+        .eq("user_id", userId);
+      if (error) {
+        throw error;
+      }
+      return (data ?? []) as Category[];
     },
 
     async existsByGmailMessageId(messageId) {

@@ -9,6 +9,8 @@ Control de finanzas personales. Kipu sincroniza tus movimientos bancarios (BCP e
 - Parseo de notificaciones reales: consumos, retiros de cajero, pagos de servicios/tarjeta, transferencias, yapeos recibidos y movimientos de wardadito.
 - Dashboard mensual: total de gastos, desglose por tarjeta y categoría, últimos movimientos.
 - Gestión de tarjetas, cuentas, personas y reglas de comercios → categorías.
+- Bot de Telegram: vincula tu cuenta y consulta `/resumen`, `/gastos`, `/tarjetas`, `/categorias` o `/sincronizar` desde el chat.
+- Notificaciones a Telegram de nuevos gastos, pagos y transacciones que requieren revisión (configurable en Ajustes).
 - PWA instalable.
 
 ## Stack
@@ -46,15 +48,43 @@ npm run dev
 | `TELEGRAM_WEBHOOK_SECRET` | Secreto del webhook de Telegram |
 | `NEXT_PUBLIC_APP_URL` | URL pública de la app (dev: `http://localhost:3000`) |
 
+## Telegram
+
+1. Crea un bot con [@BotFather](https://t.me/BotFather) y copia su token en `TELEGRAM_BOT_TOKEN`.
+2. Genera un valor aleatorio para `TELEGRAM_WEBHOOK_SECRET` (se valida con el header `X-Telegram-Bot-Api-Secret-Token`).
+3. Registra el webhook apuntando a `{NEXT_PUBLIC_APP_URL}/api/telegram/webhook` con el mismo secreto.
+4. En Ajustes → Telegram, pulsa "Conectar Telegram" y envía al bot `/start <codigo>` (el código expira en 10 minutos y es de un solo uso).
+
+Comandos disponibles en el bot: `/ayuda`, `/resumen`, `/gastos`, `/tarjetas`, `/categorias`, `/sincronizar`, `/desvincular`.
+
 ## Scripts
 
 ```bash
-npm run dev       # servidor de desarrollo
-npm run build     # build de producción
-npm run start     # servidor de producción
-npm run lint      # ESLint
-npm run test:run  # Vitest
+npm run dev            # servidor de desarrollo
+npm run build          # build de producción
+npm run start          # servidor de producción
+npm run lint           # ESLint
+npm run test:run       # Vitest
+npm run telegram:setup # registra el webhook de Telegram contra NEXT_PUBLIC_APP_URL
 ```
+
+## Despliegue en Vercel
+
+1. Sube el repositorio a GitHub y conéctalo en [Vercel](https://vercel.com/new) (Importa tu repo). Vercel detecta Next.js automáticamente; no hace falta `vercel.json`.
+2. Completa en **Project → Settings → Environment Variables** todas las variables de `.env.example` con los valores de **producción** (NUNCA uses `.env` local):
+   - `NEXT_PUBLIC_APP_URL` = `https://tu-app.vercel.app`
+   - `GOOGLE_REDIRECT_URI` = `https://tu-app.vercel.app/api/gmail/callback`
+   - `GOOGLE_AI_API_KEY` opcional (clasificación con IA).
+3. En [Google Cloud Console](https://console.cloud.google.com/apis/credentials), en tu OAuth Client ID añade en *Authorized redirect URIs* la URL de producción del callback (`https://tu-app.vercel.app/api/gmail/callback`) y en *Authorized JavaScript origins* `https://tu-app.vercel.app`.
+4. Despliega y, cuando la app esté en línea, registra el webhook de Telegram:
+
+   ```bash
+   npm run telegram:setup
+   ```
+
+5. Aplica las migraciones de `supabase/migrations/` al proyecto Supabase de producción.
+
+> Las variables `NEXT_PUBLIC_*` se inyectan en build; las demás (service role, tokens, secretos) viven solo en el servidor y nunca deben exponerse en el cliente.
 
 ## Estructura
 

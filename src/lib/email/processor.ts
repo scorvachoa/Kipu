@@ -1,5 +1,5 @@
 import type { Account, Card } from "@/types/cards";
-import type { MerchantRule } from "@/types/categories";
+import type { Category, MerchantRule } from "@/types/categories";
 import type {
   BankingBank,
   TransactionStatus,
@@ -12,11 +12,13 @@ import { normalizeParsedTransaction } from "./normalizer";
 import type { NormalizedTransaction } from "./normalizer";
 import { parserForEmail } from "./parsers";
 import type { TransactionRepository } from "./repositories";
+import type { CategoryService } from "@/lib/ai/category-service";
 
 export interface StaticResources {
   cards: Card[];
   accounts: Account[];
   rules: MerchantRule[];
+  categories: Category[];
 }
 
 export interface ResolvedTransaction {
@@ -38,12 +40,13 @@ export interface EmailProcessingResult {
 export async function loadResources(
   repository: TransactionRepository,
 ): Promise<StaticResources> {
-  const [cards, accounts, rules] = await Promise.all([
+  const [cards, accounts, rules, categories] = await Promise.all([
     repository.listCards(),
     repository.listAccounts(),
     repository.listRules(),
+    repository.listCategories(),
   ]);
-  return { cards, accounts, rules };
+  return { cards, accounts, rules, categories };
 }
 
 export function identifyInstrument(
@@ -123,6 +126,7 @@ export async function resolveTransaction(
   email: EmailEnvelope,
   repository: TransactionRepository,
   resources: StaticResources,
+  categoryService?: CategoryService,
 ): Promise<ResolvedTransaction> {
   const normalized = normalizeParsedTransaction(parsed);
   const instrument = identifyInstrument(parsed, resources);
@@ -133,9 +137,10 @@ export async function resolveTransaction(
     repository,
   );
 
-  const categoryId = classifyByRules(
-    resources.rules,
+  const categoryId = await resolveCategory(
+    resources,
     normalized.normalizedMerchant ?? undefined,
+    categoryService,
   );
 
   const needsCategory = !categoryId;
@@ -155,10 +160,36 @@ export async function resolveTransaction(
   };
 }
 
+async function resolveCategory(
+  resources: StaticResources,
+  normalizedMerchant: string | undefined,
+  categoryService: CategoryService | undefined,
+): Promise<string | null> {
+  const byRules = classifyByRules(resources.rules, normalizedMerchant);
+  if (byRules) {
+    return byRules;
+  }
+
+  if (categoryService && normalizedMerchant) {
+    const candidates = resources.categories.map((category) => ({
+      id: category.id,
+      name: category.name,
+    }));
+    try {
+      return await categoryService.categorize(normalizedMerchant, candidates);
+    } catch {
+      return null;
+    }
+  }
+
+  return null;
+}
+
 export async function processEmail(
   email: EmailEnvelope,
   repository: TransactionRepository,
   resources: StaticResources,
+  categoryService?: CategoryService,
 ): Promise<EmailProcessingResult> {
   const parser = parserForEmail(email);
   if (!parser) {
@@ -173,7 +204,13 @@ export async function processEmail(
   const transactions: ResolvedTransaction[] = [];
   for (const parsed of parsedTransactions) {
     transactions.push(
-      await resolveTransaction(parsed, email, repository, resources),
+      await resolveTransaction(
+        parsed,
+        email,
+        repository,
+        resources,
+        categoryService,
+      ),
     );
   }
 
