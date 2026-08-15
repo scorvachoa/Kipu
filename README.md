@@ -4,13 +4,16 @@ Control de finanzas personales. Kipu sincroniza tus movimientos bancarios (BCP e
 
 ## Funcionalidades
 
-- Autenticación con email/contraseña o Google (Supabase Auth).
+- Autenticación con email/contraseña o Google (Supabase Auth). Los usuarios pueden crear cuenta directamente desde la pantalla de login.
 - Sincronización de transacciones desde Gmail (OAuth) para BCP e Interbank.
 - Parseo de notificaciones reales: consumos, retiros de cajero, pagos de servicios/tarjeta, transferencias, yapeos recibidos y movimientos de wardadito.
 - Dashboard mensual: total de gastos, desglose por tarjeta y categoría, últimos movimientos.
 - Gestión de tarjetas, cuentas, personas y reglas de comercios → categorías.
 - Bot de Telegram: vincula tu cuenta y consulta `/resumen`, `/gastos`, `/tarjetas`, `/categorias` o `/sincronizar` desde el chat.
+- IA en el bot: `/anomalias` (gastos inusuales), `/suscripciones` (cargos recurrentes), `/prediccion`, `/semana`, `/descifrar`, `/regla`, `/pregunta` (lenguaje natural).
+- Resumen del mes en lenguaje natural en el dashboard (botón "Resumen con IA").
 - Notificaciones a Telegram de nuevos gastos, pagos y transacciones que requieren revisión (configurable en Ajustes).
+- Multi-proveedor de IA con fallback automático: Gemini, Groq y OpenRouter se rotan y se saltan los que agotan su cuota.
 - PWA instalable.
 
 ## Stack
@@ -47,6 +50,14 @@ npm run dev
 | `TELEGRAM_BOT_TOKEN` | Token del bot de Telegram |
 | `TELEGRAM_WEBHOOK_SECRET` | Secreto del webhook de Telegram |
 | `NEXT_PUBLIC_APP_URL` | URL pública de la app (dev: `http://localhost:3000`) |
+| `GOOGLE_AI_API_KEY` / `GOOGLE_AI_API_KEY_1..N` | (Opcional) Gemini. Varias keys rotan y saltan las agotadas (429) |
+| `GOOGLE_AI_MODEL` | Modelo de Gemini (default `gemini-2.5-flash`) |
+| `GROQ_API_KEY` / `GROQ_API_KEY_1..N` | (Opcional) Groq. Recomendado para emails (no entrena con tus datos) |
+| `GROQ_MODEL` | Modelo de Groq (default `openai/gpt-oss-120b`) |
+| `OPENROUTER_API_KEY` / `OPENROUTER_API_KEY_1..N` | (Opcional) OpenRouter como fallback (modelos `:free`) |
+| `OPENROUTER_MODEL` | Modelo de OpenRouter (default `google/gemma-4-26b-a4b-it:free`) |
+| `AI_PROVIDER_ORDER` | Orden global de proveedores para dashboard y Telegram (default `gemini,groq,openrouter`) |
+| `EMAIL_AI_PROVIDER_ORDER` | Orden para el parseo/categorización de CORREOS. Por defecto `groq,openrouter` (excluye Gemini: no entrena con tus datos bancarios). Principal + respaldo |
 
 ## Telegram
 
@@ -55,7 +66,7 @@ npm run dev
 3. Registra el webhook apuntando a `{NEXT_PUBLIC_APP_URL}/api/telegram/webhook` con el mismo secreto.
 4. En Ajustes → Telegram, pulsa "Conectar Telegram" y envía al bot `/start <codigo>` (el código expira en 10 minutos y es de un solo uso).
 
-Comandos disponibles en el bot: `/ayuda`, `/resumen`, `/gastos`, `/tarjetas`, `/categorias`, `/sincronizar`, `/desvincular`.
+Comandos disponibles en el bot: `/ayuda`, `/resumen`, `/gastos`, `/tarjetas`, `/categorias`, `/anomalias`, `/suscripciones`, `/prediccion`, `/semana`, `/descifrar`, `/regla`, `/pregunta`, `/sincronizar`, `/desvincular`.
 
 ## Scripts
 
@@ -74,7 +85,7 @@ npm run telegram:setup # registra el webhook de Telegram contra NEXT_PUBLIC_APP_
 2. Completa en **Project → Settings → Environment Variables** todas las variables de `.env.example` con los valores de **producción** (NUNCA uses `.env` local):
    - `NEXT_PUBLIC_APP_URL` = `https://tu-app.vercel.app`
    - `GOOGLE_REDIRECT_URI` = `https://tu-app.vercel.app/api/gmail/callback`
-   - `GOOGLE_AI_API_KEY` opcional (clasificación con IA).
+   - `GOOGLE_AI_API_KEY` opcional (dashboard y Telegram con IA). Para rotar entre varias keys, define `GOOGLE_AI_API_KEY_1`, `GOOGLE_AI_API_KEY_2`, … (cuantas quieras); la app rota automáticamente y salta las que agotan su cuota (HTTP 429). Para el **procesamiento de correos** (parseo con IA y categorización), define `GROQ_API_KEY_1..N` (principal) y, opcionalmente, `OPENROUTER_API_KEY_1..N` (respaldo). Los correos NO usan Gemini (puede entrenar con tus datos bancarios); el orden se controla con `EMAIL_AI_PROVIDER_ORDER`.
 3. En [Google Cloud Console](https://console.cloud.google.com/apis/credentials), en tu OAuth Client ID añade en *Authorized redirect URIs* la URL de producción del callback (`https://tu-app.vercel.app/api/gmail/callback`) y en *Authorized JavaScript origins* `https://tu-app.vercel.app`.
 4. Despliega y, cuando la app esté en línea, registra el webhook de Telegram:
 

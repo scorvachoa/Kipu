@@ -205,3 +205,81 @@ export function formatCategoriesBreakdown(
 
   return lines.join("\n");
 }
+
+export function formatAnomalies(
+  anomalies: {
+    merchant: string | null;
+    amount: number;
+    currency: string;
+    categoryName: string | null;
+    merchantAverage: number | null;
+    merchantMultiplier: number | null;
+    categoryAverage: number | null;
+  }[],
+): string {
+  const lines = ["🚨 Posibles gastos anómalos", ""];
+
+  if (anomalies.length === 0) {
+    lines.push("No se detectaron gastos inusuales.");
+    return lines.join("\n");
+  }
+
+  for (const anomaly of anomalies) {
+    const merchant = anomaly.merchant ?? anomaly.categoryName ?? "Desconocido";
+    lines.push(`🏪 ${merchant}`);
+    lines.push(formatMoney(anomaly.amount, anomaly.currency));
+    if (anomaly.merchantAverage !== null && anomaly.merchantMultiplier !== null) {
+      lines.push(
+        `Promedio: ${formatMoney(anomaly.merchantAverage, anomaly.currency)} (~${anomaly.merchantMultiplier.toFixed(1)}x lo habitual)`,
+      );
+    } else if (anomaly.categoryAverage !== null) {
+      lines.push(
+        `Promedio de ${anomaly.categoryName}: ${formatMoney(anomaly.categoryAverage, anomaly.currency)}`,
+      );
+    }
+    lines.push("");
+  }
+
+  while (lines.length > 0 && lines[lines.length - 1] === "") {
+    lines.pop();
+  }
+
+  return lines.join("\n");
+}
+
+export function formatSubscriptions(
+  subscriptions: {
+    merchant: string;
+    avgAmount: number;
+    occurrences: number;
+    monthsActive: number;
+    lastDate: string | null;
+  }[],
+): string {
+  const lines = ["🔄 Cargos recurrentes detectados", ""];
+
+  if (subscriptions.length === 0) {
+    lines.push("No se detectaron suscripciones o cargos recurrentes.");
+    return lines.join("\n");
+  }
+
+  for (const subscription of subscriptions) {
+    lines.push(`🏪 ${subscription.merchant}`);
+    lines.push(`Frecuencia: ${subscription.occurrences} cargos en ${subscription.monthsActive} mes(es)`);
+    lines.push(structuredMoney(subscription.avgAmount));
+    if (subscription.lastDate) {
+      lines.push(`Último: ${formatTransactionDate(subscription.lastDate, null)}`);
+    }
+    lines.push("");
+  }
+
+  while (lines.length > 0 && lines[lines.length - 1] === "") {
+    lines.pop();
+  }
+
+  return lines.join("\n");
+}
+
+function structuredMoney(amount: number): string {
+  return `Monto promedio: ${formatMoney(amount)}`;
+}

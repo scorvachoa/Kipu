@@ -117,9 +117,36 @@ export const bcpPagoServiciosRealExpected: ParsedTransaction = {
   amount: 677.3,
   currency: "PEN",
   transactionDate: "2026-07-21",
+  transactionTime: "17:38",
   cardLast4: "4165",
   merchant: "UNIVERSIDAD CONTINENTAL S.A.C.",
   operationNumber: "04600330",
+};
+
+export const ioPagoServicioRealEmail = envelope(
+  "io-real-pago-servicio",
+  "iO Notificaciones <notificaciones@io.pe>",
+  "El pago de tu servicio se realizó de manera exitosa",
+  `Fecha:Viernes, 14 de agosto del 2026
+Hora:06:47 p.m.
+Monto pagado:S/30.90
+Empresa:Bitel
+Tipo de servicio:Postpago Bitel
+Código de usuario:929361679
+Títular:Ed*****
+Código de operación:2058532`,
+);
+
+export const ioPagoServicioRealExpected: ParsedTransaction = {
+  bank: "BCP IO",
+  transactionType: "payment",
+  paymentMethod: "bank_account",
+  amount: 30.9,
+  currency: "PEN",
+  transactionDate: "2026-08-14",
+  transactionTime: "18:47",
+  merchant: "Bitel",
+  operationNumber: "2058532",
 };
 
 export const bcpYapeoRealEmail = envelope(

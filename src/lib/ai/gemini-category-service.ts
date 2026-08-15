@@ -1,5 +1,5 @@
 import type { CategoryCandidate, CategoryService } from "./category-service";
-import { categorizeWithGemini } from "./gemini";
+import { categorizeManyWithGemini } from "./gemini";
 
 export interface CategoryClassifier {
   classify(
@@ -7,6 +7,8 @@ export interface CategoryClassifier {
     categories: CategoryCandidate[],
   ): Promise<string | null>;
 }
+
+const BATCH_SIZE = 8;
 
 export class GeminiCategoryService implements CategoryService, CategoryClassifier {
   private readonly signal: AbortSignal | undefined;
@@ -19,12 +21,20 @@ export class GeminiCategoryService implements CategoryService, CategoryClassifie
     merchant: string,
     categories: CategoryCandidate[],
   ): Promise<string | null> {
-    const result = await categorizeWithGemini(
-      merchant,
-      categories,
-      this.signal,
-    );
-    return result?.category_id ?? null;
+    const [result] = await categorizeManyWithGemini([merchant], categories);
+    return result ?? null;
+  }
+
+  async categorizeMany(
+    merchants: string[],
+    categories: CategoryCandidate[],
+  ): Promise<Array<string | null>> {
+    const results: Array<string | null> = [];
+    for (let i = 0; i < merchants.length; i += BATCH_SIZE) {
+      const chunk = merchants.slice(i, i + BATCH_SIZE);
+      results.push(...(await categorizeManyWithGemini(chunk, categories)));
+    }
+    return results;
   }
 
   async classify(
@@ -39,5 +49,9 @@ export class GeminiCategoryService implements CategoryService, CategoryClassifie
 export class NoopCategoryService implements CategoryService {
   async categorize(): Promise<string | null> {
     return null;
+  }
+
+  async categorizeMany(): Promise<Array<string | null>> {
+    return [];
   }
 }

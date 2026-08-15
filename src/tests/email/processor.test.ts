@@ -13,7 +13,7 @@ import type { SyncEmailsProvider } from "@/lib/email/sync";
 import type { TransactionRepository } from "@/lib/email/repositories";
 import type { CategoryService } from "@/lib/ai/category-service";
 import type { MerchantRule, Category } from "@/types/categories";
-import type { Account, Card } from "@/types/cards";
+import type { Account, Card, Person } from "@/types/cards";
 import type { NewTransaction } from "@/types/transactions";
 import type { ParsedTransaction } from "@/types/transactions";
 import {
@@ -26,13 +26,14 @@ class FakeRepository implements TransactionRepository {
   accounts: Account[] = [];
   rules: MerchantRule[] = [];
   categories: Category[] = [];
+  people: Person[] = [];
   stored: NewTransaction[] = [];
 
   async listCards() {
-    return this.cards;
+    return [...this.cards];
   }
   async listAccounts() {
-    return this.accounts;
+    return [...this.accounts];
   }
   async listRules() {
     return this.rules;
@@ -53,6 +54,45 @@ class FakeRepository implements TransactionRepository {
   }
   async insertTransaction(transaction: NewTransaction) {
     this.stored.push({ ...transaction });
+  }
+  async insertCard(card: Omit<Card, "id" | "user_id" | "created_at" | "updated_at">) {
+    const id = `card-${this.cards.length + 1}`;
+    const created: Card = {
+      id,
+      user_id: "u1",
+      ...card,
+      created_at: "",
+      updated_at: "",
+    };
+    this.cards.push(created);
+    return created;
+  }
+  async insertAccount(account: Omit<Account, "id" | "user_id" | "created_at" | "updated_at">) {
+    const id = `acc-${this.accounts.length + 1}`;
+    const created: Account = {
+      id,
+      user_id: "u1",
+      ...account,
+      created_at: "",
+      updated_at: "",
+    };
+    this.accounts.push(created);
+    return created;
+  }
+  async listPeople() {
+    return [...this.people];
+  }
+  async insertPerson(person: Omit<Person, "id" | "user_id" | "created_at" | "updated_at">) {
+    const id = `person-${this.people.length + 1}`;
+    const created: Person = {
+      id,
+      user_id: "u1",
+      ...person,
+      created_at: "",
+      updated_at: "",
+    };
+    this.people.push(created);
+    return created;
   }
 }
 
@@ -80,7 +120,7 @@ function makeResources(
   rules: MerchantRule[] = [],
   accounts: Account[] = [],
 ): StaticResources {
-  return { cards, accounts, rules, categories: [] };
+  return { cards, accounts, rules, categories: [], people: [] };
 }
 
 function firstParsedOf(email: EmailEnvelope): ParsedTransaction {
@@ -159,6 +199,7 @@ describe("identifyInstrument", () => {
       accounts: [account],
       rules: [],
       categories: [],
+      people: [],
     });
     expect(instrument.accountId).toBe("acc-3902");
     expect(instrument.cardId).toBeNull();
@@ -183,7 +224,7 @@ describe("resolveTransaction", () => {
     expect(resolved.categoryId).toBe("cat-alim");
   });
 
-  it("marca tarjeta desconocida como needs_review", async () => {
+  it("auto-crea la tarjeta desconocida", async () => {
     const repo = new FakeRepository();
     const resources = makeResources([], [marketMaryRule]);
     const resolved = await resolveTransaction(
@@ -192,8 +233,12 @@ describe("resolveTransaction", () => {
       repo,
       resources,
     );
-    expect(resolved.status).toBe("needs_review");
-    expect(resolved.cardId).toBeNull();
+    expect(repo.cards).toHaveLength(1);
+    expect(repo.cards[0].bank).toBe("BCP");
+    expect(repo.cards[0].last4).toBe("8795");
+    expect(repo.cards[0].name).toBe("Tarjeta BCP ****8795");
+    expect(resolved.cardId).toBe(repo.cards[0].id);
+    expect(resolved.status).toBe("confirmed");
   });
 
   it("marca needs_review cuando falta categoría", async () => {
@@ -208,6 +253,56 @@ describe("resolveTransaction", () => {
     );
     expect(resolved.status).toBe("needs_review");
     expect(resolved.cardId).toBe("card-1");
+  });
+
+  it("auto-crea la persona del saludo y la vincula a la transacción y la tarjeta", async () => {
+    const repo = new FakeRepository();
+    const emailConSaludo: EmailEnvelope = {
+      ...bcpConsumoEmail,
+      html: `<p>Hola SMITH, ¡Tu operación se realizó con éxito!</p>${bcpConsumoEmail.html}`,
+    };
+    const resources = makeResources([], [marketMaryRule]);
+    const resolved = await resolveTransaction(
+      firstParsedOf(emailConSaludo),
+      emailConSaludo,
+      repo,
+      resources,
+    );
+    expect(repo.people).toHaveLength(1);
+    expect(repo.people[0].name).toBe("Smith");
+    expect(resolved.personId).toBe(repo.people[0].id);
+    expect(repo.cards[0].owner_person_id).toBe(repo.people[0].id);
+    expect(resolved.status).toBe("confirmed");
+  });
+
+  it("reutiliza la persona existente en lugar de duplicarla", async () => {
+    const repo = new FakeRepository();
+    repo.people = [
+      {
+        id: "person-existing",
+        user_id: "u1",
+        name: "Smith",
+        type: "owner",
+        created_at: "",
+        updated_at: "",
+      },
+    ];
+    const emailConSaludo: EmailEnvelope = {
+      ...bcpConsumoEmail,
+      html: `<p>Hola SMITH, ¡Tu operación se realizó con éxito!</p>${bcpConsumoEmail.html}`,
+    };
+    const resources = {
+      ...makeResources([], [marketMaryRule]),
+      people: [...repo.people],
+    };
+    const resolved = await resolveTransaction(
+      firstParsedOf(emailConSaludo),
+      emailConSaludo,
+      repo,
+      resources,
+    );
+    expect(repo.people).toHaveLength(1);
+    expect(resolved.personId).toBe("person-existing");
   });
 
   it("no marca el pago Interbank como compra", async () => {
@@ -241,12 +336,19 @@ describe("resolveTransaction", () => {
           updated_at: "",
         },
       ],
+      people: [],
     };
     const calls: string[] = [];
     const categoryService: CategoryService = {
       async categorize(merchant) {
         calls.push(merchant);
         return "cat-farmacia";
+      },
+      async categorizeMany(merchants) {
+        return merchants.map((m) => {
+          calls.push(m);
+          return "cat-farmacia";
+        });
       },
     };
 
@@ -270,6 +372,9 @@ describe("resolveTransaction", () => {
       async categorize() {
         return "cat-ia";
       },
+      async categorizeMany(merchants) {
+        return merchants.map(() => "cat-ia");
+      },
     };
 
     const resolved = await resolveTransaction(
@@ -292,6 +397,9 @@ describe("resolveTransaction", () => {
       async categorize() {
         return null;
       },
+      async categorizeMany(merchants) {
+        return merchants.map(() => null);
+      },
     };
 
     const resolved = await resolveTransaction(
@@ -304,6 +412,27 @@ describe("resolveTransaction", () => {
 
     expect(resolved.categoryId).toBeNull();
     expect(resolved.status).toBe("needs_review");
+  });
+it("auto-crea la cuenta cuando la transacción trae accountLast4", async () => {
+    const repo = new FakeRepository();
+    const resources = makeResources([], []);
+    const resolved = await resolveTransaction(
+      {
+        bank: "INTERBANK",
+        transactionType: "transfer",
+        paymentMethod: "bank_account",
+        amount: 1000,
+        currency: "PEN",
+        transactionDate: "2026-08-11",
+        accountLast4: "1732",
+      },
+      interbankPagoEmail,
+      repo,
+      resources,
+    );
+    expect(repo.accounts).toHaveLength(1);
+    expect(repo.accounts[0].name).toBe("Cuenta INTERBANK ****1732");
+    expect(resolved.accountId).toBe(repo.accounts[0].id);
   });
 });
 
@@ -380,7 +509,7 @@ describe("runSync", () => {
     expect(repo.stored.length).toBe(1);
   });
 
-  it("cuenta tarjeta desconocida como requires_review", async () => {
+  it("auto-crea la tarjeta en runSync cuando es desconocida", async () => {
     const repo = new FakeRepository();
     const result = await runSync({
       userId: "u1",
@@ -388,8 +517,9 @@ describe("runSync", () => {
       provider: providerWith([bcpConsumoEmail]),
     });
     expect(result.transactionsCreated).toBe(1);
-    expect(result.requiresReview).toBe(1);
-    expect(repo.stored[0].status).toBe("needs_review");
+    expect(repo.cards).toHaveLength(1);
+    expect(repo.cards[0].name).toBe("Tarjeta BCP ****8795");
+    expect(repo.stored[0].card_id).toBe(repo.cards[0].id);
   });
 
   it("registra un pago de Interbank como payment", async () => {

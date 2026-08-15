@@ -182,12 +182,12 @@ function parseDecimal(raw: string): number | undefined {
 export function parseSpanishDate(
   value: string,
 ): { date?: string; time?: string } {
-  const timeMatch = value.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+  const timeMatch = value.match(/(\d{1,2}):(\d{2})\s*([AaPp])[. ]*\s*[Mm][. ]*/i);
   let time: string | undefined;
   if (timeMatch) {
     let hour = parseInt(timeMatch[1], 10);
     const minute = timeMatch[2];
-    const ampm = timeMatch[3].toUpperCase();
+    const ampm = timeMatch[3].toUpperCase() === "P" ? "PM" : "AM";
     if (ampm === "PM" && hour < 12) {
       hour += 12;
     }
@@ -198,7 +198,7 @@ export function parseSpanishDate(
   }
 
   const dateMatch = value.match(
-    /(\d{1,2})\s+(?:de\s+)?([A-Za-záéíóúñÁÉÍÓÚÑ]+?)(?:\s+de\s+|\s+)(\d{4})/i,
+    /(\d{1,2})\s+(?:de\s+)?([A-Za-záéíóúñÁÉÍÓÚÑ]+?)(?:\s+(?:de|del)\s+|\s+)(\d{4})/i,
   );
   if (dateMatch) {
     const month = SPANISH_MONTHS[dateMatch[2].toLowerCase().replace(/\.$/, "")];

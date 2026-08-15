@@ -39,6 +39,68 @@ const TYPE_LABELS: Record<string, string> = {
   other: "Otro",
 };
 
+function SuggestRuleButton({ merchant }: { merchant: string | null }) {
+  const [state, setState] = useState<"idle" | "loading" | "done" | "error">(
+    "idle",
+  );
+  const [message, setMessage] = useState<string | null>(null);
+
+  if (state === "done") {
+    return (
+      <span className="text-xs font-medium text-emerald-600">
+        {message ?? "Regla creada"}
+      </span>
+    );
+  }
+
+  if (state === "error") {
+    return (
+      <span className="text-xs font-medium text-red-600">
+        {message ?? "Error"}
+      </span>
+    );
+  }
+
+  return (
+    <Button
+      variant="ghost"
+      size="sm"
+      className="h-6 px-2 text-xs"
+      disabled={state === "loading"}
+      onClick={async () => {
+        if (!merchant) return;
+        setState("loading");
+        try {
+          const response = await fetch("/api/rules", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ merchant }),
+          });
+          if (!response.ok) {
+            setState("error");
+            setMessage("No se pudo crear la regla");
+            return;
+          }
+          const data = (await response.json()) as {
+            category_name: string | null;
+          };
+          setState("done");
+          setMessage(
+            data.category_name
+              ? `Regla → ${data.category_name}`
+              : "Regla creada",
+          );
+        } catch {
+          setState("error");
+          setMessage("Error de red");
+        }
+      }}
+    >
+      {state === "loading" ? "…" : "Sugerir regla"}
+    </Button>
+  );
+}
+
 export function TransactionsView({
   rows,
   cards,
@@ -231,7 +293,14 @@ export function TransactionsView({
                         </TableCell>
                         <TableCell className="whitespace-nowrap">
                           {t.categories?.icon ?? ""}{" "}
-                          {t.categories?.name ?? "Sin categoría"}
+                          {t.categories?.name ?? (
+                            <span className="text-muted-foreground">
+                              Sin categoría
+                            </span>
+                          )}
+                          {!t.categories?.name ? (
+                            <SuggestRuleButton merchant={t.merchant} />
+                          ) : null}
                         </TableCell>
                         <TableCell className="whitespace-nowrap text-muted-foreground">
                           {t.cards?.name ?? "—"}
@@ -303,6 +372,9 @@ export function TransactionsView({
                     <Badge variant="outline">
                       {t.categories?.icon} {t.categories?.name ?? "Sin categoría"}
                     </Badge>
+                    {!t.categories?.name ? (
+                      <SuggestRuleButton merchant={t.merchant} />
+                    ) : null}
                     {t.cards ? <Badge variant="outline">{t.cards.name}</Badge> : null}
                     {t.people ? <Badge variant="outline">{t.people.name}</Badge> : null}
                   </p>

@@ -3,6 +3,7 @@ import {
   buildGmailQuery,
   formatGmailDate,
   isSyncRange,
+  PERU_FINANCIAL_SENDERS,
   rangeToDays,
 } from "@/lib/gmail/query";
 
@@ -34,6 +35,19 @@ describe("query", () => {
     expect(query).toContain("from:interbank.com.pe");
     expect(query).toContain("from:notificacionesbcp.com.pe");
     expect(query).toContain("from:netinterbank.com.pe");
+    expect(query).toContain("from:io.pe");
     expect(query).toContain("after:2026/05/13");
+  });
+
+  it("incluye dominios de la mega lista de entidades peruanas", () => {
+    expect(PERU_FINANCIAL_SENDERS).toContain("io.pe");
+    expect(PERU_FINANCIAL_SENDERS).toContain("viabcp.com");
+    expect(PERU_FINANCIAL_SENDERS).toContain("cajaarequipa.pe");
+    expect(PERU_FINANCIAL_SENDERS).toContain("paypal.com");
+    expect(PERU_FINANCIAL_SENDERS.length).toBeGreaterThan(100);
+
+    const query = buildGmailQuery(new Date("2026-05-13T00:00:00Z"));
+    expect(query).toContain("from:io.pe");
+    expect(query).toContain("from:cajaarequipa.pe");
   });
 });

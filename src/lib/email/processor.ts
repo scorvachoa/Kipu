@@ -1,7 +1,9 @@
-import type { Account, Card } from "@/types/cards";
+import type { Account, Card, Person } from "@/types/cards";
 import type { Category, MerchantRule } from "@/types/categories";
 import type {
   BankingBank,
+  CardType,
+  PaymentMethod,
   TransactionStatus,
 } from "@/types/shared";
 import type { ParsedTransaction } from "@/types/transactions";
@@ -11,6 +13,9 @@ import { fallbackFingerprint } from "./deduplication";
 import { normalizeParsedTransaction } from "./normalizer";
 import type { NormalizedTransaction } from "./normalizer";
 import { parserForEmail } from "./parsers";
+import { parseEmailWithAi } from "./parsers/ai-catchall";
+import { canonical } from "./parsers/support";
+import { extractGreetingName } from "./person-name";
 import type { TransactionRepository } from "./repositories";
 import type { CategoryService } from "@/lib/ai/category-service";
 
@@ -19,6 +24,7 @@ export interface StaticResources {
   accounts: Account[];
   rules: MerchantRule[];
   categories: Category[];
+  people: Person[];
 }
 
 export interface ResolvedTransaction {
@@ -40,22 +46,57 @@ export interface EmailProcessingResult {
 export async function loadResources(
   repository: TransactionRepository,
 ): Promise<StaticResources> {
-  const [cards, accounts, rules, categories] = await Promise.all([
+  const [cards, accounts, rules, categories, people] = await Promise.all([
     repository.listCards(),
     repository.listAccounts(),
     repository.listRules(),
     repository.listCategories(),
+    repository.listPeople(),
   ]);
-  return { cards, accounts, rules, categories };
+  return { cards, accounts, rules, categories, people };
+}
+
+export async function ensurePerson(
+  name: string,
+  repository: TransactionRepository,
+  resources: StaticResources,
+): Promise<Person | null> {
+  if (!name) {
+    return null;
+  }
+  const key = canonical(name);
+  const existing = resources.people.find(
+    (person) => canonical(person.name) === key,
+  );
+  if (existing) {
+    return existing;
+  }
+  const created = await repository.insertPerson({
+    name,
+    type: "owner",
+  });
+  resources.people.push(created);
+  return created;
 }
 
 export function identifyInstrument(
   parsed: ParsedTransaction,
   resources: StaticResources,
 ): { cardId: string | null; accountId: string | null; personId: string | null } {
+  const instrument = identifyInstrumentFrom(parsed, resources);
+  if (instrument) {
+    return instrument;
+  }
+  return { cardId: null, accountId: null, personId: null };
+}
+
+function identifyInstrumentFrom(
+  parsed: ParsedTransaction,
+  resources: StaticResources,
+): { cardId: string | null; accountId: string | null; personId: string | null } | null {
   const last4 = parsed.cardLast4 ?? parsed.accountLast4;
   if (!last4) {
-    return { cardId: null, accountId: null, personId: null };
+    return null;
   }
 
   const card = resources.cards.find(
@@ -84,6 +125,86 @@ export function identifyInstrument(
       accountId: account.id,
       personId: account.owner_person_id,
     };
+  }
+
+  return null;
+}
+
+function cardNameFor(bank: BankingBank, last4: string): string {
+  return `Tarjeta ${bank} ****${last4}`;
+}
+
+function accountNameFor(bank: BankingBank, last4: string): string {
+  return `Cuenta ${bank} ****${last4}`;
+}
+
+function cardTypeFor(paymentMethod: PaymentMethod): CardType {
+  if (paymentMethod === "debit_card") {
+    return "debit";
+  }
+  return "credit";
+}
+
+export async function ensureInstrument(
+  parsed: ParsedTransaction,
+  repository: TransactionRepository,
+  resources: StaticResources,
+  ownerPersonId?: string | null,
+): Promise<{ cardId: string | null; accountId: string | null; personId: string | null }> {
+  const existing = identifyInstrumentFrom(parsed, resources);
+  if (existing) {
+    return existing;
+  }
+
+  if (parsed.cardLast4) {
+    const exists = resources.cards.some(
+      (candidate) =>
+        candidate.bank === parsed.bank && candidate.last4 === parsed.cardLast4,
+    );
+    if (!exists) {
+      const card = await repository.insertCard({
+        bank: parsed.bank,
+        name: cardNameFor(parsed.bank, parsed.cardLast4),
+        card_type: cardTypeFor(parsed.paymentMethod),
+        last4: parsed.cardLast4,
+        owner_person_id: ownerPersonId ?? null,
+        currency: parsed.currency,
+        closing_day: null,
+        payment_day: null,
+        active: true,
+      });
+      resources.cards.push(card);
+      return {
+        cardId: card.id,
+        accountId: null,
+        personId: card.owner_person_id,
+      };
+    }
+  }
+
+  if (parsed.accountLast4) {
+    const exists = resources.accounts.some(
+      (candidate) =>
+        candidate.bank === parsed.bank &&
+        candidate.last4 === parsed.accountLast4,
+    );
+    if (!exists) {
+      const account = await repository.insertAccount({
+        bank: parsed.bank,
+        name: accountNameFor(parsed.bank, parsed.accountLast4),
+        account_type: "savings",
+        last4: parsed.accountLast4,
+        owner_person_id: ownerPersonId ?? null,
+        currency: parsed.currency,
+        active: true,
+      });
+      resources.accounts.push(account);
+      return {
+        cardId: null,
+        accountId: account.id,
+        personId: account.owner_person_id,
+      };
+    }
   }
 
   return { cardId: null, accountId: null, personId: null };
@@ -127,9 +248,24 @@ export async function resolveTransaction(
   repository: TransactionRepository,
   resources: StaticResources,
   categoryService?: CategoryService,
+  aiCategoryAssignments?: Map<string, string | null>,
+  greetingPersonId?: string | null,
 ): Promise<ResolvedTransaction> {
   const normalized = normalizeParsedTransaction(parsed);
-  const instrument = identifyInstrument(parsed, resources);
+
+  const greetingName = extractGreetingName(email);
+  const greetingPerson =
+    greetingName && !greetingPersonId
+      ? await ensurePerson(greetingName, repository, resources)
+      : null;
+  const ownerPersonId = greetingPerson?.id ?? greetingPersonId ?? null;
+
+  const instrument = await ensureInstrument(
+    parsed,
+    repository,
+    resources,
+    ownerPersonId,
+  );
   const duplicate = await isDuplicate(
     parsed,
     normalized,
@@ -141,7 +277,10 @@ export async function resolveTransaction(
     resources,
     normalized.normalizedMerchant ?? undefined,
     categoryService,
+    aiCategoryAssignments,
   );
+
+  const personId = instrument.personId ?? ownerPersonId;
 
   const needsCategory = !categoryId;
   const needsInstrument = !instrument.cardId && !instrument.accountId;
@@ -155,7 +294,7 @@ export async function resolveTransaction(
     status,
     cardId: instrument.cardId,
     accountId: instrument.accountId,
-    personId: instrument.personId,
+    personId,
     categoryId,
   };
 }
@@ -164,10 +303,18 @@ async function resolveCategory(
   resources: StaticResources,
   normalizedMerchant: string | undefined,
   categoryService: CategoryService | undefined,
+  aiCategoryAssignments?: Map<string, string | null>,
 ): Promise<string | null> {
   const byRules = classifyByRules(resources.rules, normalizedMerchant);
   if (byRules) {
     return byRules;
+  }
+
+  if (aiCategoryAssignments && normalizedMerchant) {
+    const assigned = aiCategoryAssignments.get(normalizedMerchant);
+    if (assigned !== undefined) {
+      return assigned;
+    }
   }
 
   if (categoryService && normalizedMerchant) {
@@ -185,21 +332,58 @@ async function resolveCategory(
   return null;
 }
 
+export async function collectUncategorizedMerchants(
+  emails: EmailEnvelope[],
+  resources: StaticResources,
+): Promise<string[]> {
+  const seen = new Set<string>();
+  for (const email of emails) {
+    const parser = parserForEmail(email);
+    if (!parser) {
+      continue;
+    }
+    for (const parsed of parser.parse(email)) {
+      const normalized = normalizeParsedTransaction(parsed);
+      const merchant = normalized.normalizedMerchant ?? undefined;
+      if (!merchant) {
+        continue;
+      }
+      if (classifyByRules(resources.rules, merchant)) {
+        continue;
+      }
+      seen.add(merchant);
+    }
+  }
+  return [...seen];
+}
+
 export async function processEmail(
   email: EmailEnvelope,
   repository: TransactionRepository,
   resources: StaticResources,
   categoryService?: CategoryService,
+  aiCategoryAssignments?: Map<string, string | null>,
 ): Promise<EmailProcessingResult> {
   const parser = parserForEmail(email);
-  if (!parser) {
+  let parsedTransactions: ParsedTransaction[] = [];
+
+  if (parser) {
+    parsedTransactions = parser.parse(email);
+  }
+
+  if (parsedTransactions.length === 0) {
+    parsedTransactions = await parseEmailWithAi(email);
+  }
+
+  if (parsedTransactions.length === 0) {
     return { handled: false, transactions: [] };
   }
 
-  const parsedTransactions = parser.parse(email);
-  if (parsedTransactions.length === 0) {
-    return { handled: true, transactions: [] };
-  }
+  const greetingName = extractGreetingName(email);
+  const greetingPerson = greetingName
+    ? await ensurePerson(greetingName, repository, resources)
+    : null;
+  const greetingPersonId = greetingPerson?.id ?? null;
 
   const transactions: ResolvedTransaction[] = [];
   for (const parsed of parsedTransactions) {
@@ -210,6 +394,8 @@ export async function processEmail(
         repository,
         resources,
         categoryService,
+        aiCategoryAssignments,
+        greetingPersonId,
       ),
     );
   }

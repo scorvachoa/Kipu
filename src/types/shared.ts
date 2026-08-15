@@ -1,5 +1,5 @@
 export const BANK_NAMES = ["BCP", "INTERBANK", "BCP IO"] as const;
-export type BankingBank = (typeof BANK_NAMES)[number];
+export type BankingBank = string;
 
 export const CARD_TYPES = ["credit", "debit"] as const;
 export type CardType = (typeof CARD_TYPES)[number];

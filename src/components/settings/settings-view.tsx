@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Mail, User as UserIcon, Plus, Trash2, Send } from "lucide-react";
+import { Mail, User as UserIcon, Trash2, Send } from "lucide-react";
 import { formatLastSync } from "@/lib/format";
 import type {
   GmailConnectionStatus,
@@ -11,7 +11,6 @@ import type {
 } from "@/lib/supabase/queries";
 import { SyncButton } from "@/components/dashboard/sync-button";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Card,
   CardContent,
@@ -20,13 +19,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export function SettingsView({
@@ -41,9 +33,6 @@ export function SettingsView({
   people: Person[];
 }) {
   const router = useRouter();
-  const [personName, setPersonName] = useState("");
-  const [personType, setPersonType] = useState("family");
-  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [gmailError, setGmailError] = useState<string | null>(null);
   const [disconnecting, setDisconnecting] = useState(false);
@@ -52,26 +41,6 @@ export function SettingsView({
   const [linking, setLinking] = useState(false);
   const [telegramError, setTelegramError] = useState<string | null>(null);
   const [disconnectingTelegram, setDisconnectingTelegram] = useState(false);
-
-  async function addPerson(e: React.FormEvent) {
-    e.preventDefault();
-    setSubmitting(true);
-    setError(null);
-    const res = await fetch("/api/people", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: personName, type: personType }),
-    });
-    const body = (await res.json()) as { error?: string };
-    if (!res.ok) {
-      setError(body.error ?? "No se pudo guardar la persona.");
-      setSubmitting(false);
-      return;
-    }
-    setPersonName("");
-    setSubmitting(false);
-    router.refresh();
-  }
 
   async function disconnectGmail() {
     setDisconnecting(true);
@@ -314,7 +283,8 @@ export function SettingsView({
         <CardHeader>
           <CardTitle className="text-base">Personas</CardTitle>
           <CardDescription>
-            Dueños de tarjetas (tú o familiares) para atribuir gastos
+            Se crean automáticamente al escanear correos (según el saludo, ej.
+            &quot;Hola Smith&quot;)
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -326,7 +296,7 @@ export function SettingsView({
                     <UserIcon className="h-4 w-4 text-muted-foreground" />
                     {person.name}
                     <Badge variant="secondary" className="capitalize">
-                      {person.type}
+                      {person.type === "owner" ? "Dueño" : person.type}
                     </Badge>
                   </span>
                   <Button
@@ -343,31 +313,10 @@ export function SettingsView({
             </ul>
           ) : (
             <p className="text-sm text-muted-foreground">
-              Aún no hay personas. Agrega una para asignar dueños a tus tarjetas.
+              Aún no hay personas. Aparecerán automáticamente al escanear
+              correos con saludos como &quot;Hola Smith&quot;.
             </p>
           )}
-          <form onSubmit={addPerson} className="flex flex-wrap gap-2">
-            <Input
-              className="max-w-[200px]"
-              placeholder="Nombre de la persona"
-              value={personName}
-              onChange={(e) => setPersonName(e.target.value)}
-              required
-            />
-            <Select value={personType} onValueChange={setPersonType}>
-              <SelectTrigger className="w-[120px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="family">Familia</SelectItem>
-                <SelectItem value="other">Otro</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button type="submit" disabled={submitting}>
-              <Plus className="h-4 w-4" />
-              Agregar
-            </Button>
-          </form>
           {error ? (
             <Alert variant="destructive">
               <AlertDescription>{error}</AlertDescription>

@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
 import type { TransactionRepository } from "@/lib/email/repositories";
-import type { Account, Card } from "@/types/cards";
+import type { Account, Card, Person } from "@/types/cards";
 import type { Category, MerchantRule } from "@/types/categories";
 
 export function createTransactionRepository(
@@ -100,6 +100,53 @@ export function createTransactionRepository(
       if (error) {
         throw error;
       }
+    },
+
+    async insertCard(card) {
+      const { data, error } = await client
+        .from("cards")
+        .insert({ ...card, user_id: userId } as never)
+        .select("*")
+        .single();
+      if (error) {
+        throw error;
+      }
+      return data as Card;
+    },
+
+    async insertAccount(account) {
+      const { data, error } = await client
+        .from("accounts")
+        .insert({ ...account, user_id: userId } as never)
+        .select("*")
+        .single();
+      if (error) {
+        throw error;
+      }
+      return data as Account;
+    },
+
+    async listPeople() {
+      const { data, error } = await client
+        .from("people")
+        .select("*")
+        .eq("user_id", userId);
+      if (error) {
+        throw error;
+      }
+      return (data ?? []) as Person[];
+    },
+
+    async insertPerson(person) {
+      const { data, error } = await client
+        .from("people")
+        .insert({ ...person, user_id: userId } as never)
+        .select("*")
+        .single();
+      if (error) {
+        throw error;
+      }
+      return data as Person;
     },
   };
 }

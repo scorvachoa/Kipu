@@ -1,81 +1,88 @@
-import { GoogleGenAI } from "@google/genai";
 import type { CategoryCandidate } from "./category-service";
+import { emailProviderOrder } from "./providers";
+import { generateJSON } from "./generate-json";
 
-const DEFAULT_MODEL = "gemini-2.5-flash";
-
-function apiKey(): string | null {
-  return process.env.GOOGLE_AI_API_KEY ?? null;
-}
-
-function modelName(): string {
-  return process.env.GOOGLE_AI_MODEL ?? DEFAULT_MODEL;
-}
-
-export interface GeminiCategoryResult {
+export interface GeminiBatchCategoryResult {
+  indice: number;
   category_id: string | null;
 }
 
-export async function categorizeWithGemini(
-  merchant: string,
+export async function categorizeManyWithGemini(
+  merchants: string[],
   categories: CategoryCandidate[],
-  _signal?: AbortSignal,
-): Promise<GeminiCategoryResult | null> {
-  const key = apiKey();
-  if (!key || categories.length === 0) {
-    return null;
+): Promise<Array<string | null>> {
+  if (merchants.length === 0 || categories.length === 0) {
+    return merchants.map(() => null);
   }
 
   const list = categories
     .map((candidate) => `${candidate.name} (id: ${candidate.id})`)
     .join(", ");
 
-  const prompt = [
-    "Eres un asistente de finanzas personales. Recibes el nombre de un comercio normalizado y una lista de categorías posibles.",
-    "",
-    `Comercio: "${merchant}"`,
-    `Categorías disponibles: ${list}`,
-    "",
-    "Devuelve SOLO un JSON con la categoría más apropiada:",
-    '{"category_id": "id_de_la_categoria"}',
-    "Si ninguna categoría encaja, devuelve:",
-    '{"category_id": null}',
-  ].join("\n");
+  const numbered = merchants
+    .map((merchant, i) => `[${i + 1}] ${merchant}`)
+    .join("\n");
 
-  const ai = new GoogleGenAI({ apiKey: key });
-
-  const response = await ai.models.generateContent({
-    model: modelName(),
-    contents: prompt,
-    config: {
-      responseMimeType: "application/json",
-      responseSchema: {
-        type: "OBJECT",
-        properties: {
-          category_id: { type: "STRING", nullable: true },
+  const schema = {
+    type: "OBJECT",
+    properties: {
+      categorias: {
+        type: "ARRAY",
+        items: {
+          type: "OBJECT",
+          properties: {
+            indice: { type: "INTEGER" },
+            category_id: { type: "STRING", nullable: true },
+          },
+          required: ["indice", "category_id"],
         },
-        required: ["category_id"],
       },
     },
+    required: ["categorias"],
+  };
+
+  const prompt = [
+    "Eres un asistente de finanzas personales. Recibes N comercios normalizados y una lista de categorías posibles.",
+    "",
+    "Cada comercio viene numerado como [N]. Debes asignar a cada uno la categoría más apropiada.",
+    "Devuelve SOLO un JSON con un array 'categorias'.",
+    "Cada elemento del array debe ser:",
+    '  {"indice": N, "category_id": "id_de_la_categoria"}',
+    "Si un comercio no encaja en ninguna categoría, usa category_id: null.",
+    "Incluye TODOS los comercios (mismo número de elementos que comercios).",
+    "",
+    `Categorías disponibles: ${list}`,
+    "",
+    "Comercios:",
+    numbered,
+  ].join("\n");
+
+  const parsed = await generateJSON<{ categorias?: GeminiBatchCategoryResult[] }>({
+    prompt,
+    schema,
+    providerOrder: emailProviderOrder(),
   });
-
-  const text = response.text;
-  if (!text) {
-    return null;
+  if (!parsed?.categorias) {
+    return merchants.map(() => null);
   }
 
-  try {
-    const parsed = JSON.parse(text) as GeminiCategoryResult;
-    if (typeof parsed.category_id !== "string") {
-      return null;
+  const idsByIndex = new Map<number, string | null>();
+  for (const item of parsed.categorias) {
+    if (
+      typeof item?.indice === "number" &&
+      (typeof item.category_id === "string" || item.category_id === null)
+    ) {
+      idsByIndex.set(item.indice, item.category_id);
     }
-    const known = categories.some(
-      (candidate) => candidate.id === parsed.category_id,
-    );
-    if (!known) {
-      return null;
-    }
-    return parsed;
-  } catch {
-    return null;
   }
+
+  const known = new Set(categories.map((candidate) => candidate.id));
+
+  return merchants.map((_, i) => {
+    const id = idsByIndex.get(i + 1) ?? null;
+    if (id === null) {
+      return null;
+    }
+    return known.has(id) ? id : null;
+  });
 }

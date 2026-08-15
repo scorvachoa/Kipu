@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { bcpParser } from "@/lib/email/parsers/bcp";
 import { interbankParser } from "@/lib/email/parsers/interbank";
+import { ioParser } from "@/lib/email/parsers/io";
 import {
   bcpConsumoRealEmail,
   bcpConsumoRealExpected,
@@ -20,6 +21,8 @@ import {
   interbankPagoRealExpected,
   interbankTransferenciaRealEmail,
   interbankTransferenciaRealExpected,
+  ioPagoServicioRealEmail,
+  ioPagoServicioRealExpected,
 } from "@/tests/fixtures/real-emails";
 
 describe("parsers con formatos reales", () => {
@@ -74,6 +77,12 @@ describe("parsers con formatos reales", () => {
   it("parsea un pago Interbank real", () => {
     expect(interbankParser.parse(interbankPagoRealEmail)).toEqual([
       interbankPagoRealExpected,
+    ]);
+  });
+
+  it("parsea un pago de servicio iO real (dominio io.pe)", () => {
+    expect(ioParser.parse(ioPagoServicioRealEmail)).toEqual([
+      ioPagoServicioRealExpected,
     ]);
   });
 });

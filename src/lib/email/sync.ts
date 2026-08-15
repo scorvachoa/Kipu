@@ -4,6 +4,7 @@ import type { NewTransaction } from "@/types/transactions";
 import type { TransactionStatus } from "@/types/shared";
 import {
   buildTransactionFingerprint,
+  collectUncategorizedMerchants,
   loadResources,
   processEmail,
   type ResolvedTransaction,
@@ -38,6 +39,40 @@ function isUniqueViolation(error: unknown): boolean {
   return false;
 }
 
+export async function assignAICategories(
+  emails: EmailEnvelope[],
+  resources: Awaited<ReturnType<typeof loadResources>>,
+  categoryService?: CategoryService,
+): Promise<Map<string, string | null> | undefined> {
+  if (!categoryService) {
+    return undefined;
+  }
+
+  const merchants = await collectUncategorizedMerchants(emails, resources);
+  if (merchants.length === 0) {
+    return undefined;
+  }
+
+  const candidates = resources.categories.map((category) => ({
+    id: category.id,
+    name: category.name,
+  }));
+
+  try {
+    const assignments = await categoryService.categorizeMany(
+      merchants,
+      candidates,
+    );
+    const map = new Map<string, string | null>();
+    merchants.forEach((merchant, i) => {
+      map.set(merchant, assignments[i] ?? null);
+    });
+    return map;
+  } catch {
+    return undefined;
+  }
+}
+
 export async function runSync(
   dependencies: SyncDependencies,
 ): Promise<SyncOutcome> {
@@ -57,10 +92,22 @@ export async function runSync(
 
   const resources = await loadResources(repository);
 
+  const aiCategoryAssignments = await assignAICategories(
+    emails,
+    resources,
+    categoryService,
+  );
+
   for (const email of emails) {
     let outcome;
     try {
-      outcome = await processEmail(email, repository, resources, categoryService);
+      outcome = await processEmail(
+        email,
+        repository,
+        resources,
+        categoryService,
+        aiCategoryAssignments,
+      );
     } catch {
       result.errors += 1;
       continue;

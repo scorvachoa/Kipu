@@ -21,6 +21,7 @@ import { monthLabel } from "@/lib/finance/summary";
 import type { MonthSummary } from "@/lib/finance/summary";
 import type { GmailConnectionStatus } from "@/lib/supabase/queries";
 import { SyncButton } from "@/components/dashboard/sync-button";
+import { DashNarration } from "@/components/dashboard/dashboard-narration";
 import {
   Card,
   CardContent,
@@ -122,6 +123,8 @@ export function DashboardView({
           icon={CreditCard}
         />
       </div>
+
+      <DashNarration monthKey={monthKey} />
 
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
