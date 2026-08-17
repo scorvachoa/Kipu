@@ -30,6 +30,7 @@ export async function POST(request: Request) {
       duplicatesFound: outcome.duplicatesFound,
       requiresReview: outcome.requiresReview,
       errors: outcome.errors,
+      hasMore: outcome.hasMore,
     });
   } catch (err) {
     if (err instanceof GmailNotConnectedError) {

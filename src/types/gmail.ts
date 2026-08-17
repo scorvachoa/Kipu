@@ -6,6 +6,9 @@ export interface GmailConnection {
   scope: string;
   last_sync_at: string | null;
   revoked_at: string | null;
+  sync_cursor: string | null;
+  sync_since: string | null;
+  sync_range: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -33,4 +36,5 @@ export interface GmailSyncResult {
   duplicatesFound: number;
   requiresReview: number;
   errors: number;
+  hasMore: boolean;
 }

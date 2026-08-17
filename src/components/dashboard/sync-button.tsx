@@ -28,32 +28,49 @@ export function SyncButton({ connected }: { connected: boolean }) {
     setLoading(true);
     setMessage(null);
     try {
-      const res = await fetch("/api/gmail/sync", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(
-          range === "incremental" ? {} : { range },
-        ),
-      });
-      const body = (await res.json()) as {
-        error?: string;
-        emailsFound?: number;
-        emailsProcessed?: number;
-        transactionsCreated?: number;
-        duplicatesFound?: number;
-        errors?: number;
-      };
-      if (!res.ok) {
-        setMessage(body.error ?? "No se pudo sincronizar.");
-        return;
+      let hasMore = true;
+      let batch = 0;
+      let emailsFound = 0;
+      let transactionsCreated = 0;
+      let duplicatesFound = 0;
+      let errors = 0;
+      while (hasMore && batch < 200) {
+        batch += 1;
+        const res = await fetch("/api/gmail/sync", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(
+            range === "incremental" ? {} : { range },
+          ),
+        });
+        const body = (await res.json()) as {
+          error?: string;
+          emailsFound?: number;
+          transactionsCreated?: number;
+          duplicatesFound?: number;
+          errors?: number;
+          hasMore?: boolean;
+        };
+        if (!res.ok) {
+          setMessage(body.error ?? "No se pudo sincronizar.");
+          return;
+        }
+        emailsFound += body.emailsFound ?? 0;
+        transactionsCreated += body.transactionsCreated ?? 0;
+        duplicatesFound += body.duplicatesFound ?? 0;
+        errors += body.errors ?? 0;
+        hasMore = body.hasMore ?? false;
+        if (hasMore) {
+          setMessage(`Sincronizando… lote ${batch}`);
+        }
       }
       const parts = [
-        `${body.emailsFound ?? 0} correos`,
-        `${body.transactionsCreated ?? 0} nuevos`,
-        `${body.duplicatesFound ?? 0} duplicados`,
+        `${emailsFound} correos`,
+        `${transactionsCreated} nuevos`,
+        `${duplicatesFound} duplicados`,
       ];
-      if ((body.errors ?? 0) > 0) {
-        parts.push(`${body.errors} con error`);
+      if (errors > 0) {
+        parts.push(`${errors} con error`);
       }
       setMessage(`Sincronización completa · ${parts.join(", ")}.`);
       router.refresh();

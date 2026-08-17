@@ -185,6 +185,7 @@ export async function callOpenAi(
           }
         : {}),
     },
+    signal: AbortSignal.timeout(20000),
     body: JSON.stringify({
       model: config.model,
       messages: [{ role: "user", content: params.prompt }],

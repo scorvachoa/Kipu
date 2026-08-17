@@ -25,6 +25,7 @@ export interface SyncDependencies {
 
 export interface SyncOutcome extends GmailSyncResult {
   createdTransactions: NewTransaction[];
+  hasMore: boolean;
 }
 
 function isUniqueViolation(error: unknown): boolean {
@@ -85,6 +86,7 @@ export async function runSync(
     requiresReview: 0,
     errors: 0,
     createdTransactions: [],
+    hasMore: false,
   };
 
   const emails = await provider.fetchEmails();

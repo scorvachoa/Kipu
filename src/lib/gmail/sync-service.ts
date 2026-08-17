@@ -2,10 +2,14 @@ import { decryptToken } from "@/lib/security/tokens";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createTransactionRepository } from "@/lib/supabase/transaction-repository";
 import {
+  clearSyncCursor,
   getGmailConnection,
+  saveSyncCursor,
   updateLastSyncAt,
 } from "@/lib/supabase/gmail-adapter";
-import { createGmailEmailsProvider } from "@/lib/gmail/provider";
+import {
+  createGmailEmailsProvider,
+} from "@/lib/gmail/provider";
 import {
   buildGmailQuery,
   DEFAULT_SYNC_RANGE,
@@ -17,14 +21,26 @@ import { runSync } from "@/lib/email/sync";
 import type { SyncOutcome } from "@/lib/email/sync";
 import { createCategoryService } from "@/lib/ai";
 import { notifyNewTransactions } from "@/lib/telegram/notifications";
+import type { GmailConnection } from "@/types/gmail";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+const BATCH_SIZE = 30;
 
 export class GmailNotConnectedError extends Error {
   constructor() {
     super("Gmail no conectado");
     this.name = "GmailNotConnectedError";
   }
+}
+
+function computeSince(connection: GmailConnection, range?: SyncRange): Date {
+  if (range) {
+    return new Date(Date.now() - rangeToDays(range) * DAY_MS);
+  }
+  if (connection.last_sync_at) {
+    return new Date(new Date(connection.last_sync_at).getTime() - DAY_MS);
+  }
+  return new Date(Date.now() - rangeToDays(DEFAULT_SYNC_RANGE) * DAY_MS);
 }
 
 export async function syncUserGmail(
@@ -38,15 +54,29 @@ export async function syncUserGmail(
 
   const refreshToken = decryptToken(connection.refresh_token_encrypted);
 
-  const since = range
-    ? new Date(Date.now() - rangeToDays(range) * DAY_MS)
-    : connection.last_sync_at
-      ? new Date(new Date(connection.last_sync_at).getTime() - DAY_MS)
-      : new Date(Date.now() - rangeToDays(DEFAULT_SYNC_RANGE) * DAY_MS);
+  const storedRange = connection.sync_range ?? null;
+  const resume =
+    Boolean(connection.sync_cursor && connection.sync_since) &&
+    (range === undefined || storedRange === null || storedRange === range);
+
+  if (!resume && connection.sync_cursor) {
+    await clearSyncCursor(userId);
+  }
+
+  const since = resume
+    ? new Date(connection.sync_since!)
+    : computeSince(connection, range);
+  const rangeKey = resume
+    ? (connection.sync_range ?? range ?? "incremental")
+    : range ?? "incremental";
+
+  const query = buildGmailQuery(since);
 
   const provider = createGmailEmailsProvider({
     refreshToken,
-    query: buildGmailQuery(since),
+    query,
+    maxResults: BATCH_SIZE,
+    pageToken: connection.sync_cursor ?? undefined,
   });
 
   const admin = createAdminClient();
@@ -59,6 +89,20 @@ export async function syncUserGmail(
     provider,
     categoryService,
   });
+
+  const nextPageToken = provider.nextPageToken;
+  if (nextPageToken) {
+    await saveSyncCursor(userId, {
+      cursor: nextPageToken,
+      since,
+      range: rangeKey,
+    });
+    outcome.hasMore = true;
+    return outcome;
+  }
+
+  await clearSyncCursor(userId);
+  outcome.hasMore = false;
 
   try {
     await updateLastSyncAt(userId);

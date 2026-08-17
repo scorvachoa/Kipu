@@ -105,6 +105,33 @@ export async function updateLastSyncAt(
   }
 }
 
+export async function saveSyncCursor(
+  userId: string,
+  input: { cursor: string; since: Date; range: string },
+): Promise<void> {
+  const admin = createAdminClient();
+  const { error } = await admin.from("gmail_connections").update({
+    sync_cursor: input.cursor,
+    sync_since: input.since.toISOString(),
+    sync_range: input.range,
+  } as never).eq("user_id", userId);
+  if (error) {
+    throw error;
+  }
+}
+
+export async function clearSyncCursor(userId: string): Promise<void> {
+  const admin = createAdminClient();
+  const { error } = await admin.from("gmail_connections").update({
+    sync_cursor: null,
+    sync_since: null,
+    sync_range: null,
+  } as never).eq("user_id", userId);
+  if (error) {
+    throw error;
+  }
+}
+
 export async function listActiveGmailUserIds(): Promise<string[]> {
   const admin = createAdminClient();
   const { data, error } = await admin

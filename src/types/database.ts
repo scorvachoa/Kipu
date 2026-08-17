@@ -232,6 +232,9 @@ export interface Database {
           scope: string;
           last_sync_at: string | null;
           revoked_at: string | null;
+          sync_cursor: string | null;
+          sync_since: string | null;
+          sync_range: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -243,6 +246,9 @@ export interface Database {
           scope?: string;
           last_sync_at?: string | null;
           revoked_at?: string | null;
+          sync_cursor?: string | null;
+          sync_since?: string | null;
+          sync_range?: string | null;
           created_at?: string;
           updated_at?: string;
         };
