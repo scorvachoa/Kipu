@@ -79,55 +79,6 @@ export function canonicalText(fragments: string[]): string {
   return fragments.map(canonical).join(" ");
 }
 
-export class FieldExtractor {
-  constructor(private readonly fragments: string[]) {}
-
-  get(label: string): string | undefined {
-    const normalized = canonical(label);
-
-    for (let i = 0; i < this.fragments.length; i++) {
-      const current = canonical(this.fragments[i]);
-
-      if (current === normalized) {
-        const value = this.fragments[i + 1];
-        if (value !== undefined) {
-          return value;
-        }
-      }
-
-      if (current.startsWith(normalized)) {
-        const rest = current
-          .slice(normalized.length)
-          .replace(/^[:.\-*\s]+/, "")
-          .trim();
-        if (rest) {
-          return rest;
-        }
-      }
-    }
-
-    return undefined;
-  }
-
-  getValueAfter(pattern: RegExp): string | undefined {
-    for (let i = 0; i < this.fragments.length; i++) {
-      if (pattern.test(canonical(this.fragments[i]))) {
-        const value = this.fragments[i + 1];
-        if (value !== undefined) {
-          return value;
-        }
-      }
-    }
-    return undefined;
-  }
-
-  getMatching(pattern: RegExp): string | undefined {
-    return this.fragments.find((fragment) =>
-      pattern.test(canonical(fragment)),
-    );
-  }
-}
-
 export function parseAmountCurrency(
   value: string,
 ): { amount: number | undefined; currency: Currency } {

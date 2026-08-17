@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -28,8 +29,16 @@ export function LoginForm() {
   const [password, setPassword] = useState("");
   const [passwordConfirm, setPasswordConfirm] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(
+    searchParams.get("error") === "reset-link"
+      ? "El enlace de recuperación no es válido o ya expiró. Solicita uno nuevo."
+      : null,
+  );
+  const [notice, setNotice] = useState<string | null>(
+    searchParams.get("reset") === "ok"
+      ? "Contraseña actualizada. Inicia sesión con tu nueva contraseña."
+      : null,
+  );
 
   function switchMode(next: Mode) {
     setMode(next);
@@ -157,7 +166,16 @@ export function LoginForm() {
                 required
               />
             </div>
-          ) : null}
+          ) : (
+            <div className="text-right">
+              <Link
+                href="/forgot-password"
+                className="text-sm text-muted-foreground hover:text-foreground hover:underline"
+              >
+                ¿Olvidaste tu contraseña?
+              </Link>
+            </div>
+          )}
           {error ? (
             <Alert variant="destructive">
               <AlertDescription>{error}</AlertDescription>

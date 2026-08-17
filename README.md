@@ -5,16 +5,20 @@ Control de finanzas personales. Kipu sincroniza tus movimientos bancarios (BCP e
 ## Funcionalidades
 
 - Autenticación con email/contraseña o Google (Supabase Auth). Los usuarios pueden crear cuenta directamente desde la pantalla de login.
+- **Recuperación de contraseña**: flujo de `forgot-password` / `reset-password` con enlace por email (Supabase).
 - Sincronización de transacciones desde Gmail (OAuth) para BCP e Interbank.
 - Parseo de notificaciones reales: consumos, retiros de cajero, pagos de servicios/tarjeta, transferencias, yapeos recibidos y movimientos de wardadito.
 - Dashboard mensual: total de gastos, desglose por tarjeta y categoría, últimos movimientos.
+- **Categorías editables con color e icono** (iconos Lucide) desde Ajustes → Categorías.
 - Gestión de tarjetas, cuentas, personas y reglas de comercios → categorías.
+- **Tema claro/oscuro** con persistencia y sin parpadeo al cargar (toggle en toda la app).
+- **Landing de bienvenida** con preview del dashboard y acceso a login/registro.
 - Bot de Telegram: vincula tu cuenta y consulta `/resumen`, `/gastos`, `/tarjetas`, `/categorias` o `/sincronizar` desde el chat.
 - IA en el bot: `/anomalias` (gastos inusuales), `/suscripciones` (cargos recurrentes), `/prediccion`, `/semana`, `/descifrar`, `/regla`, `/pregunta` (lenguaje natural).
 - Resumen del mes en lenguaje natural en el dashboard (botón "Resumen con IA").
 - Notificaciones a Telegram de nuevos gastos, pagos y transacciones que requieren revisión (configurable en Ajustes).
 - Multi-proveedor de IA con fallback automático: Gemini, Groq y OpenRouter se rotan y se saltan los que agotan su cuota.
-- PWA instalable.
+- PWA instalable con logo y favicon propios.
 
 ## Stack
 
@@ -27,9 +31,9 @@ Control de finanzas personales. Kipu sincroniza tus movimientos bancarios (BCP e
 
 ## Configuración
 
-1. Crea un proyecto en Supabase y aplica las migraciones de `supabase/migrations/`.
+1. Crea un proyecto en Supabase y aplica las migraciones de `supabase/migrations/` en orden (incluida la `005_category_color.sql`, necesaria para las categorías con color).
 2. Crea un proyecto OAuth en Google Cloud con acceso a la API de Gmail y configura la pantalla de consentimiento.
-3. Copia `.env.example` a `.env.local` y completa las variables (tabla abajo).
+3. Copia `.env.example` a `.env.local` y completa las variables (tabla abajo). `.env.example` es la plantilla versionada: los valores reales quedan fuera del repo.
 4. Instala dependencias y arranca:
 
 ```bash
@@ -68,6 +72,16 @@ npm run dev
 
 Comandos disponibles en el bot: `/ayuda`, `/resumen`, `/gastos`, `/tarjetas`, `/categorias`, `/anomalias`, `/suscripciones`, `/prediccion`, `/semana`, `/descifrar`, `/regla`, `/pregunta`, `/sincronizar`, `/desvincular`.
 
+## Migraciones (Supabase)
+
+Aplica las migraciones en orden desde el **SQL Editor** o con la CLI:
+
+1. `001_init.sql` — esquema base (categorías, tarjetas, cuentas, personas, transacciones, reglas, sync logs).
+2. `002_gmail_oauth.sql` — conexión de Gmail (refresh token cifrado).
+3. `003_income_type.sql` — soporte de transacciones de ingreso.
+4. `004_telegram_link_codes.sql` — códigos de vinculación para Telegram.
+5. `005_category_color.sql` — columna `color` en `categories` (para las categorías con color).
+
 ## Scripts
 
 ```bash
@@ -93,7 +107,7 @@ npm run telegram:setup # registra el webhook de Telegram contra NEXT_PUBLIC_APP_
    npm run telegram:setup
    ```
 
-5. Aplica las migraciones de `supabase/migrations/` al proyecto Supabase de producción.
+5. Aplica las migraciones de `supabase/migrations/` (ver [Migraciones (Supabase)](#migraciones-supabase)). También agrega en **Authentication → URL Configuration → Redirect URLs** de Supabase: `http://localhost:3000/**` y `https://tu-app.vercel.app/**` (necesario para el flujo de recuperación de contraseña).
 
 > Las variables `NEXT_PUBLIC_*` se inyectan en build; las demás (service role, tokens, secretos) viven solo en el servidor y nunca deben exponerse en el cliente.
 
@@ -103,7 +117,8 @@ npm run telegram:setup # registra el webhook de Telegram contra NEXT_PUBLIC_APP_
 
 ## Estructura
 
-- `src/app/` — rutas de la app (App Router) y API routes.
-- `src/lib/` — lógica de negocio: parsers de correos, sync Gmail, Supabase, finanzas.
+- `src/app/` — rutas de la app (App Router) y API routes (`/login`, `/forgot-password`, `/reset-password`, `/dashboard`, `/transactions`, `/categories`, `/settings`, `/api/*`).
+- `src/components/` — UI compartida: `ui/` (shadcn/ui), `layout/` (app-shell, theme toggle, logo), `auth/` (login, recuperación de contraseña), `welcome/` (landing + preview del dashboard).
+- `src/lib/` — lógica de negocio: parsers de correos, sync Gmail, Supabase, finanzas, IA (dashboard + bot).
 - `src/tests/` — tests y fixtures (con formatos reales de correos).
 - `supabase/migrations/` — migraciones de la base de datos.

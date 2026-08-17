@@ -23,6 +23,10 @@
 # misc
 .DS_Store
 *.pem
+Thumbs.db
+*.tmp
+*.bak
+*.swp
 
 # debug
 npm-debug.log*
@@ -31,7 +35,9 @@ yarn-error.log*
 .pnpm-debug.log*
 
 # env files (can opt-in for committing if needed)
-.env*
+.env
+.env.*
+!.env.example
 
 # vercel
 .vercel
@@ -40,5 +46,13 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# ide / editor
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
 # datos locales de prueba (correos reales capturados)
 /prueba/
+
+# scripts temporales
+*.tmp.js

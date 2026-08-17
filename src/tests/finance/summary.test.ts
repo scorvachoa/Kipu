@@ -54,13 +54,13 @@ describe("aggregateMonthSummary", () => {
       tx({
         amount: 40,
         merchant: "Rappi",
-        categories: { name: "Comida", icon: "🍔" },
+        categories: { name: "Comida", icon: "🍔", color: null },
         cards: { name: "BCP Visa", bank: "BCP", last4: "1234" },
       }),
       tx({
         amount: 60,
         merchant: "Tiendas",
-        categories: { name: "Otros", icon: "🛍️" },
+        categories: { name: "Otros", icon: "🛍️", color: null },
         cards: { name: "Interbank Visa", bank: "INTERBANK", last4: "4321" },
       }),
       tx({

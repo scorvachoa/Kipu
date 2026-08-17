@@ -66,16 +66,21 @@ export function SyncButton({ connected }: { connected: boolean }) {
 
   return (
     <div className="space-y-2">
-      <div className="flex items-center gap-2">
-        <Button onClick={handleSync} disabled={loading} variant="outline">
+      <div className="flex flex-wrap items-center gap-2">
+        <Button onClick={handleSync} disabled={loading} variant="outline" className="flex-1 sm:flex-none">
           <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-          {loading ? "Sincronizando…" : "Sincronizar con Gmail"}
+          {loading
+            ? "Sincronizando…"
+            : <>
+                <span className="sm:hidden">Sincronizar</span>
+                <span className="hidden sm:inline">Sincronizar con Gmail</span>
+              </>}
         </Button>
         <select
           value={range}
           onChange={(event) => setRange(event.target.value)}
           disabled={loading}
-          className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+          className="h-8 flex-1 rounded-lg border border-input bg-background px-3 text-sm sm:flex-none"
           aria-label="Rango de sincronización"
         >
           <option value="incremental">Desde última sync</option>

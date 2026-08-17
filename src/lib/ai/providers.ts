@@ -277,8 +277,3 @@ export function toJsonSchema(schema: JsonSchemaNode): JsonSchemaNode {
 
   return result;
 }
-
-export interface ProviderCallResult {
-  provider: AiProvider;
-  text: string | null;
-}

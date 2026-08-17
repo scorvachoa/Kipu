@@ -44,6 +44,7 @@ export interface Category {
   user_id: string;
   name: string;
   icon: string | null;
+  color: string | null;
   parent_id: string | null;
   active: boolean;
   created_at: string;
@@ -107,7 +108,7 @@ export async function getMonthSummaryRows(
     .select(
       `id, amount, currency, transaction_type, payment_method, merchant,
        transaction_date, transaction_time, status,
-       categories(name, icon), cards(name, bank, last4), people(name)`,
+       categories(name, icon, color), cards(name, bank, last4), people(name)`,
     )
     .eq("user_id", userId)
     .gte("transaction_date", gte)
@@ -128,7 +129,7 @@ export async function listTransactions(
     .select(
       `id, amount, currency, transaction_type, payment_method, merchant,
        transaction_date, transaction_time, status,
-       categories(name, icon), cards(name, bank, last4), people(name)`,
+       categories(name, icon, color), cards(name, bank, last4), people(name)`,
     )
     .eq("user_id", userId)
     .order("transaction_date", { ascending: false })

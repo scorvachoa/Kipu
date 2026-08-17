@@ -1,5 +1,3 @@
-import type { Currency } from "./shared";
-
 export interface GmailConnection {
   id: string;
   user_id: string;
@@ -36,5 +34,3 @@ export interface GmailSyncResult {
   requiresReview: number;
   errors: number;
 }
-
-export type CurrencyConfig = Record<Currency, string>;

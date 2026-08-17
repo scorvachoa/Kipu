@@ -86,8 +86,8 @@ function sampleSummary(): MonthSummary {
     debitExpenses: 2130,
     cardPayments: 0,
     categoryBreakdown: [
-      { name: "Alimentación", icon: "Utensils", total: 1250 },
-      { name: "Transporte", icon: "Car", total: 430 },
+      { name: "Alimentación", icon: "Utensils", color: null, total: 1250 },
+      { name: "Transporte", icon: "Car", color: null, total: 430 },
     ],
     cardBreakdown: [
       { name: "BCP Débito", bank: "BCP", last4: "8795", total: 1240.5 },

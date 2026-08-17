@@ -179,6 +179,7 @@ export interface Database {
           user_id: string;
           name: string;
           icon: string | null;
+          color: string | null;
           parent_id: string | null;
           active: boolean;
           created_at: string;
@@ -189,6 +190,7 @@ export interface Database {
           user_id: string;
           name: string;
           icon?: string | null;
+          color?: string | null;
           parent_id?: string | null;
           active?: boolean;
           created_at?: string;

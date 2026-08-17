@@ -27,13 +27,6 @@ export class GmailNotConnectedError extends Error {
   }
 }
 
-export class GmailSyncConfiguredError extends Error {
-  constructor() {
-    super("Gmail sincronización no configurada");
-    this.name = "GmailSyncConfiguredError";
-  }
-}
-
 export async function syncUserGmail(
   userId: string,
   range?: SyncRange,

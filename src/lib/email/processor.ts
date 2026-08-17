@@ -131,7 +131,7 @@ function identifyInstrumentFrom(
 }
 
 function cardNameFor(bank: BankingBank, last4: string): string {
-  return `Tarjeta ${bank} ****${last4}`;
+  return `${bank} ****${last4}`;
 }
 
 function accountNameFor(bank: BankingBank, last4: string): string {

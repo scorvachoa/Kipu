@@ -6,7 +6,6 @@ import {
   ArrowDownLeft,
   ArrowUpRight,
   CreditCard,
-  PieChart as PieIcon,
   Wallet,
 } from "lucide-react";
 import {
@@ -16,12 +15,13 @@ import {
   ResponsiveContainer,
   Tooltip,
 } from "recharts";
-import { formatMoney, formatDateTime } from "@/lib/format";
+import { formatMoney, formatDateTime, cardNameWithLast4 } from "@/lib/format";
 import { monthLabel } from "@/lib/finance/summary";
 import type { MonthSummary } from "@/lib/finance/summary";
 import type { GmailConnectionStatus } from "@/lib/supabase/queries";
 import { SyncButton } from "@/components/dashboard/sync-button";
 import { DashNarration } from "@/components/dashboard/dashboard-narration";
+import { CategoryIcon } from "@/components/category-icon";
 import {
   Card,
   CardContent,
@@ -50,6 +50,25 @@ const CATEGORY_COLORS = [
   "#3b82f6",
 ];
 
+const SUMMARY_ACCENTS = [
+  {
+    iconBg: "bg-indigo-500/10",
+    iconText: "text-indigo-600 dark:text-indigo-400",
+  },
+  {
+    iconBg: "bg-emerald-500/10",
+    iconText: "text-emerald-600 dark:text-emerald-400",
+  },
+  {
+    iconBg: "bg-amber-500/10",
+    iconText: "text-amber-600 dark:text-amber-400",
+  },
+  {
+    iconBg: "bg-sky-500/10",
+    iconText: "text-sky-600 dark:text-sky-400",
+  },
+];
+
 export function DashboardView({
   summary,
   gmail,
@@ -73,7 +92,7 @@ export function DashboardView({
   const chartData = summary.categoryBreakdown.slice(0, 8).map((c, i) => ({
     name: c.name,
     value: c.total,
-    color: CATEGORY_COLORS[i % CATEGORY_COLORS.length],
+    color: c.color ?? CATEGORY_COLORS[i % CATEGORY_COLORS.length],
   }));
 
   return (
@@ -83,10 +102,12 @@ export function DashboardView({
           <h1 className="text-2xl font-semibold capitalize">{monthLabel(monthKey)}</h1>
           <p className="text-sm text-muted-foreground">Resumen de tus gastos</p>
         </div>
-        <div className="flex items-center gap-2">
-          <SyncButton connected={gmail.connected} />
+        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+          <div className="flex-1 sm:flex-none">
+            <SyncButton connected={gmail.connected} />
+          </div>
           <Select value={monthKey} onValueChange={changeMonth}>
-            <SelectTrigger className="w-[170px]">
+            <SelectTrigger className="w-full sm:w-[170px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -106,21 +127,25 @@ export function DashboardView({
           value={formatMoney(summary.totalExpenses)}
           icon={Wallet}
           hint={`${summary.transactionCount} transacciones`}
+          accent={SUMMARY_ACCENTS[0]}
         />
         <SummaryCard
           title="Débito"
           value={formatMoney(summary.debitExpenses)}
           icon={ArrowDownLeft}
+          accent={SUMMARY_ACCENTS[1]}
         />
         <SummaryCard
           title="Crédito"
           value={formatMoney(summary.creditExpenses)}
           icon={ArrowUpRight}
+          accent={SUMMARY_ACCENTS[2]}
         />
         <SummaryCard
           title="Pagos de tarjetas"
           value={formatMoney(summary.cardPayments)}
           icon={CreditCard}
+          accent={SUMMARY_ACCENTS[3]}
         />
       </div>
 
@@ -165,12 +190,16 @@ export function DashboardView({
                   {summary.categoryBreakdown.map((c, i) => (
                     <li key={c.name} className="flex items-center justify-between gap-3">
                       <span className="flex min-w-0 items-center gap-2">
-                        <span
-                          className="h-2.5 w-2.5 shrink-0 rounded-full"
-                          style={{ background: CATEGORY_COLORS[i % CATEGORY_COLORS.length] }}
-                        />
+                      <span
+                        className="h-2.5 w-2.5 shrink-0 rounded-full"
+                        style={{
+                          background:
+                            c.color ?? CATEGORY_COLORS[i % CATEGORY_COLORS.length],
+                        }}
+                      />
                         <span className="truncate">
-                          {c.icon} {c.name}
+                          <CategoryIcon name={c.icon} className="mr-1 inline h-3.5 w-3.5" />
+                          {c.name}
                         </span>
                       </span>
                       <span className="shrink-0 text-muted-foreground">
@@ -199,8 +228,7 @@ export function DashboardView({
                 {summary.cardBreakdown.map((c) => (
                   <li key={c.name} className="flex items-center justify-between gap-3">
                     <span className="min-w-0 truncate">
-                      {c.name}
-                      {c.last4 ? <span className="text-muted-foreground"> ····{c.last4}</span> : null}
+                      {cardNameWithLast4(c.name, c.last4)}
                     </span>
                     <span className="shrink-0 text-muted-foreground">{formatMoney(c.total)}</span>
                   </li>
@@ -231,8 +259,15 @@ export function DashboardView({
               {summary.latest.map((t) => (
                 <li key={t.id} className="flex items-center justify-between gap-3 px-4 py-3">
                   <div className="flex min-w-0 items-center gap-3">
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted">
-                      {t.category?.icon ?? <PieIcon className="h-4 w-4 text-muted-foreground" />}
+                    <span
+                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+                      style={
+                        t.category?.color
+                          ? { backgroundColor: t.category.color, color: "#fff" }
+                          : undefined
+                      }
+                    >
+                      <CategoryIcon name={t.category?.icon} className="h-4 w-4" />
                     </span>
                     <div className="min-w-0">
                       <p className="truncate">{t.merchant ?? "Sin descripción"}</p>
@@ -273,11 +308,13 @@ function SummaryCard({
   value,
   icon: Icon,
   hint,
+  accent,
 }: {
   title: string;
   value: string;
   icon: React.ElementType;
   hint?: string;
+  accent?: { iconBg: string; iconText: string };
 }) {
   return (
     <Card>
@@ -287,7 +324,13 @@ function SummaryCard({
           <p className="mt-1 truncate text-lg font-semibold">{value}</p>
           {hint ? <p className="mt-1 text-xs text-muted-foreground">{hint}</p> : null}
         </div>
-        <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
+        <span
+          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${
+            accent ? `${accent.iconBg} ${accent.iconText}` : "bg-muted text-muted-foreground"
+          }`}
+        >
+          <Icon className="h-4 w-4" />
+        </span>
       </CardContent>
     </Card>
   );

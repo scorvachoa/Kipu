@@ -6,7 +6,14 @@ export async function getOptionalUser(): Promise<User | null> {
   const supabase = await createClient();
   const {
     data: { user },
+    error,
   } = await supabase.auth.getUser();
+  if (error) {
+    // Sesión inválida/revocada (ej. refresh token que ya no existe):
+    // limpia las cookies para evitar el bucle de refresh + rate-limit.
+    await supabase.auth.signOut().catch(() => {});
+    return null;
+  }
   return user;
 }
 

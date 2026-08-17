@@ -12,6 +12,8 @@ import {
 } from "lucide-react";
 import { signOut } from "@/app/(app)/actions";
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/layout/theme-toggle";
+import { KipuLogo } from "@/components/layout/kipu-logo";
 
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Resumen", icon: LayoutDashboard },
@@ -35,9 +37,7 @@ export function AppShell({
       <header className="sticky top-0 z-20 border-b bg-background/95 backdrop-blur">
         <div className="mx-auto flex h-14 w-full max-w-5xl items-center justify-between gap-4 px-4">
           <Link href="/dashboard" className="flex items-center gap-2 font-semibold">
-            <span className="flex h-7 w-7 items-center justify-center rounded-md bg-primary text-primary-foreground">
-              K
-            </span>
+            <KipuLogo className="h-7 w-7 overflow-hidden rounded-md" />
             Kipu
           </Link>
           <nav className="hidden items-center gap-1 md:flex">
@@ -56,6 +56,7 @@ export function AppShell({
             ))}
           </nav>
           <div className="flex items-center gap-2">
+            <ThemeToggle />
             {userEmail ? (
               <span className="hidden max-w-[180px] truncate text-sm text-muted-foreground sm:block">
                 {userEmail}

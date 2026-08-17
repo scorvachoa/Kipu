@@ -8,6 +8,7 @@ export interface SummaryCard {
 export interface SummaryCategory {
   name: string;
   icon: string | null;
+  color: string | null;
   total: number;
 }
 
@@ -19,7 +20,7 @@ export interface LatestTransaction {
   transaction_type: string;
   transaction_date: string;
   transaction_time: string | null;
-  category: { name: string; icon: string | null } | null;
+  category: { name: string; icon: string | null; color: string | null } | null;
   card: SummaryCard | null;
   person: { name: string } | null;
   status: string;
@@ -47,7 +48,7 @@ export interface SummaryTx {
   transaction_date: string;
   transaction_time: string | null;
   status: string;
-  categories: { name: string; icon: string | null } | null;
+  categories: { name: string; icon: string | null; color: string | null } | null;
   cards: { name: string; bank: string; last4: string } | null;
   people: { name: string } | null;
 }
@@ -81,7 +82,12 @@ export function aggregateMonthSummary(rows: SummaryTx[], monthKey: string): Mont
     if (current) {
       current.total += tx.amount;
     } else {
-      categoryMap.set(name, { name, icon: category?.icon ?? null, total: tx.amount });
+      categoryMap.set(name, {
+        name,
+        icon: category?.icon ?? null,
+        color: category?.color ?? null,
+        total: tx.amount,
+      });
     }
   }
 
@@ -110,7 +116,13 @@ export function aggregateMonthSummary(rows: SummaryTx[], monthKey: string): Mont
     transaction_type: tx.transaction_type,
     transaction_date: tx.transaction_date,
     transaction_time: tx.transaction_time,
-    category: tx.categories ? { name: tx.categories.name, icon: tx.categories.icon } : null,
+    category: tx.categories
+      ? {
+          name: tx.categories.name,
+          icon: tx.categories.icon,
+          color: tx.categories.color,
+        }
+      : null,
     card: tx.cards
       ? { name: tx.cards.name, bank: tx.cards.bank, last4: tx.cards.last4, total: 0 }
       : null,

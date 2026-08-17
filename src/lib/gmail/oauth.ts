@@ -26,10 +26,3 @@ export async function exchangeCodeForTokens(code: string) {
   const { tokens } = await client.getToken(code);
   return tokens;
 }
-
-export async function refreshAccessToken(refreshToken: string) {
-  const client = getOAuthClient();
-  client.setCredentials({ refresh_token: refreshToken });
-  const credentials = await client.refreshAccessToken();
-  return credentials.credentials;
-}

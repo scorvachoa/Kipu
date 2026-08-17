@@ -7,7 +7,7 @@ export default function manifest(): MetadataRoute.Manifest {
     description: "Gestión automática de gastos personales desde Gmail",
     start_url: "/",
     display: "standalone",
-    background_color: "#ffffff",
+    background_color: "#0a0a0a",
     theme_color: "#0a0a0a",
     icons: [
       {

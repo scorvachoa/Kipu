@@ -44,14 +44,3 @@ export class GeminiCategoryService implements CategoryService, CategoryClassifie
     return this.categorize(merchant, categories);
   }
 }
-
-/** Servicio que no invoca IA; útil en tests y cuando la IA está apagada. */
-export class NoopCategoryService implements CategoryService {
-  async categorize(): Promise<string | null> {
-    return null;
-  }
-
-  async categorizeMany(): Promise<Array<string | null>> {
-    return [];
-  }
-}

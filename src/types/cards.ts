@@ -38,9 +38,3 @@ export interface Account {
   created_at: string;
   updated_at: string;
 }
-
-export type NewCard = Omit<Card, "id" | "created_at" | "updated_at">;
-
-export function cardMatchKey(bank: BankingBank, last4: string): string {
-  return `${bank}:${last4}`;
-}

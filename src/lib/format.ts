@@ -34,16 +34,12 @@ export function formatDateTime(date: string, time: string | null): string {
   return time ? `${base} · ${time}` : base;
 }
 
-export function formatRelativeDate(date: string): string {
-  const [year, month, day] = date.split("-").map(Number);
-  const target = new Date(Date.UTC(year, month - 1, day));
-  const today = new Date();
-  const startToday = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
-  const diffDays = Math.round((startToday - target.getTime()) / 86400000);
-  if (diffDays === 0) return "Hoy";
-  if (diffDays === 1) return "Ayer";
-  if (diffDays > 1 && diffDays < 7) return `Hace ${diffDays} días`;
-  return formatDateShort(date);
+export function cardNameWithLast4(
+  name: string,
+  last4: string | null | undefined,
+): string {
+  if (!last4) return name;
+  return name.includes(last4) ? name : `${name} ····${last4}`;
 }
 
 export function formatLastSync(lastSyncAt: string | null): string | null {

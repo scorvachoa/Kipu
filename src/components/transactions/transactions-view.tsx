@@ -4,7 +4,8 @@ import { useCallback, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Search, X } from "lucide-react";
-import { formatMoney, formatDateTime, monthOptions } from "@/lib/format";
+import { formatMoney, formatDateTime, monthOptions, cardNameWithLast4 } from "@/lib/format";
+import { CategoryIcon } from "@/components/category-icon";
 import { monthLabel } from "@/lib/finance/summary";
 import { TRANSACTION_TYPES, BANK_NAMES } from "@/types/shared";
 import type { SummaryTx } from "@/lib/finance/summary";
@@ -238,7 +239,18 @@ export function TransactionsView({
                 <SelectItem value="">Todas</SelectItem>
                 {categories.map((c) => (
                   <SelectItem key={c.id} value={c.id}>
-                    {c.icon} {c.name}
+                    <span className="flex items-center gap-1.5">
+                      {c.color ? (
+                        <span
+                          className="h-2.5 w-2.5 shrink-0 rounded-full"
+                          style={{ backgroundColor: c.color }}
+                        />
+                      ) : null}
+                      <span>
+                        <CategoryIcon name={c.icon} className="mr-1 inline h-3.5 w-3.5" />
+                        {c.name}
+                      </span>
+                    </span>
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -292,8 +304,23 @@ export function TransactionsView({
                           </span>
                         </TableCell>
                         <TableCell className="whitespace-nowrap">
-                          {t.categories?.icon ?? ""}{" "}
-                          {t.categories?.name ?? (
+                          {t.categories ? (
+                            <span className="flex items-center gap-1.5">
+                              {t.categories.color ? (
+                                <span
+                                  className="h-2.5 w-2.5 shrink-0 rounded-full"
+                                  style={{ backgroundColor: t.categories.color }}
+                                />
+                              ) : null}
+                              <span>
+                                <CategoryIcon
+                                  name={t.categories.icon}
+                                  className="mr-1 inline h-3.5 w-3.5"
+                                />
+                                {t.categories.name}
+                              </span>
+                            </span>
+                          ) : (
                             <span className="text-muted-foreground">
                               Sin categoría
                             </span>
@@ -303,8 +330,9 @@ export function TransactionsView({
                           ) : null}
                         </TableCell>
                         <TableCell className="whitespace-nowrap text-muted-foreground">
-                          {t.cards?.name ?? "—"}
-                          {t.cards?.last4 ? ` ····${t.cards.last4}` : ""}
+                          {t.cards
+                            ? cardNameWithLast4(t.cards.name, t.cards.last4)
+                            : "—"}
                         </TableCell>
                         <TableCell className="whitespace-nowrap text-muted-foreground">
                           {t.people?.name ?? "—"}
@@ -369,8 +397,18 @@ export function TransactionsView({
                     {t.transaction_type === "income" ? (
                       <Badge variant="secondary">Ingreso</Badge>
                     ) : null}
-                    <Badge variant="outline">
-                      {t.categories?.icon} {t.categories?.name ?? "Sin categoría"}
+                    <Badge variant="outline" className="gap-1.5">
+                      {t.categories?.color ? (
+                        <span
+                          className="h-2 w-2 shrink-0 rounded-full"
+                          style={{ backgroundColor: t.categories.color }}
+                        />
+                      ) : null}
+                      <CategoryIcon
+                        name={t.categories?.icon}
+                        className="h-3.5 w-3.5"
+                      />
+                      {t.categories?.name ?? "Sin categoría"}
                     </Badge>
                     {!t.categories?.name ? (
                       <SuggestRuleButton merchant={t.merchant} />

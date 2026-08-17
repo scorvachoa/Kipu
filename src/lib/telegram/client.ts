@@ -38,24 +38,6 @@ export async function sendTelegramMessage(
   return data.ok === true;
 }
 
-export async function setTelegramWebhook(
-  url: string,
-  secretToken: string,
-): Promise<void> {
-  const response = await fetch(
-    `${TELEGRAM_API}/bot${telegramBotToken()}/setWebhook`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ url, secret_token: secretToken }),
-    },
-  );
-
-  if (!response.ok) {
-    throw new Error(`Failed to set Telegram webhook: ${response.status}`);
-  }
-}
-
 export const TELEGRAM_WEBHOOK_SECRET_HEADER = "x-telegram-bot-api-secret-token";
 
 export function isTrustedTelegramRequest(

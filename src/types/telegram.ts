@@ -28,16 +28,6 @@ export interface TelegramUser {
   language_code?: string;
 }
 
-export interface TelegramGetMeResponse {
-  ok: boolean;
-  result?: {
-    id: number;
-    is_bot: boolean;
-    first_name: string;
-    username?: string;
-  };
-}
-
 export interface TelegramLink {
   id: string;
   user_id: string;

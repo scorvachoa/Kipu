@@ -236,7 +236,7 @@ describe("resolveTransaction", () => {
     expect(repo.cards).toHaveLength(1);
     expect(repo.cards[0].bank).toBe("BCP");
     expect(repo.cards[0].last4).toBe("8795");
-    expect(repo.cards[0].name).toBe("Tarjeta BCP ****8795");
+    expect(repo.cards[0].name).toBe("BCP ****8795");
     expect(resolved.cardId).toBe(repo.cards[0].id);
     expect(resolved.status).toBe("confirmed");
   });
@@ -518,7 +518,7 @@ describe("runSync", () => {
     });
     expect(result.transactionsCreated).toBe(1);
     expect(repo.cards).toHaveLength(1);
-    expect(repo.cards[0].name).toBe("Tarjeta BCP ****8795");
+    expect(repo.cards[0].name).toBe("BCP ****8795");
     expect(repo.stored[0].card_id).toBe(repo.cards[0].id);
   });
 
