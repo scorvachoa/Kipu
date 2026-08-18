@@ -58,12 +58,12 @@ export async function generateJSON<T>(
       try {
         const text = await callProvider(provider, apiKey, params);
         if (!text) {
-          return null;
+          continue;
         }
         try {
           return JSON.parse(text) as T;
         } catch {
-          return null;
+          continue;
         }
       } catch (error) {
         const quota = isQuotaError(error) || isOpenAiQuotaError(error);
@@ -73,9 +73,8 @@ export async function generateJSON<T>(
           } else {
             markOpenAiExhausted(provider, apiKey);
           }
-          continue;
         }
-        return null;
+        continue;
       }
     }
   }

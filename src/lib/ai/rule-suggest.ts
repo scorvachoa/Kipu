@@ -1,5 +1,6 @@
 import { generateJSON } from "@/lib/ai/generate-json";
 import type { CategoryCandidate } from "@/lib/ai/category-service";
+import { normalizeMerchant } from "@/lib/email/merchant";
 
 export interface RuleSuggestion {
   merchant_pattern: string;
@@ -14,6 +15,11 @@ export async function suggestRule(
     return null;
   }
 
+  const normalizedMerchant = normalizeMerchant(merchant);
+  if (!normalizedMerchant) {
+    return null;
+  }
+
   const list = categories
     .map((candidate) => `${candidate.name} (id: ${candidate.id})`)
     .join(", ");
@@ -21,7 +27,7 @@ export async function suggestRule(
   const prompt = [
     "Eres un asistente de finanzas personales. Un usuario quiere crear una regla automática de categorización para un comercio.",
     "",
-    `Comercio: "${merchant}"`,
+    `Comercio normalizado: "${normalizedMerchant}"`,
     `Categorías disponibles: ${list}`,
     "",
     "Propones un patrón de texto (substring simple, no regex) que coincida con el comercio normalizado, y la categoría más apropiada. El patrón debe ser corto y sin caracteres especiales.",
@@ -44,10 +50,24 @@ export async function suggestRule(
     return null;
   }
 
-  const pattern = cleanPattern(parsed.merchant_pattern);
-  if (!pattern || !categories.some((c) => c.id === parsed.category_id)) {
-    return null;
+  if (!categories.some((c) => c.id === parsed.category_id)) {
+    const byName = categories.find((c) =>
+      c.name.toUpperCase() === (parsed.category_id ?? "").toUpperCase() ||
+      (parsed.category_id ?? "").toUpperCase().includes(c.name.toUpperCase()) ||
+      c.name.toUpperCase().includes((parsed.category_id ?? "").toUpperCase()),
+    );
+    if (!byName) {
+      return null;
+    }
+    parsed.category_id = byName.id;
   }
+
+  const cleaned = cleanPattern(parsed.merchant_pattern);
+  const candidate = cleaned ? normalizeMerchant(cleaned) : undefined;
+  const pattern =
+    candidate && normalizedMerchant.includes(candidate)
+      ? candidate
+      : normalizedMerchant.slice(0, 20);
   return { merchant_pattern: pattern, category_id: parsed.category_id };
 }
 

@@ -172,6 +172,47 @@ export default async function WelcomePage() {
         <DashboardPreview />
       </section>
 
+      <section className="border-y bg-card/60">
+        <div className="mx-auto w-full max-w-5xl px-6 py-16">
+          <div className="mx-auto max-w-3xl text-center">
+            <h2 className="text-2xl font-semibold">¿Qué es Kipu?</h2>
+            <p className="mt-4 text-muted-foreground">
+              Kipu es una aplicación de finanzas personales que convierte tus
+              correos de bancos en un registro automático de tus gastos. En
+              lugar de llenar hojas de cálculo o revisar extractos a mano,
+              conecta tu Gmail y Kipu detecta cada consumo, lo clasifica por
+              categoría y tarjeta, y te da un dashboard mensual con lo que
+              gastas y dónde.
+            </p>
+            <p className="mt-3 text-muted-foreground">
+              Está pensada para personas que quieren saber a dónde va su dinero
+              sin cambiar de banco ni usar integraciones bancarias: solo se
+              necesita Gmail.
+            </p>
+          </div>
+          <div className="mt-10 grid gap-4 sm:grid-cols-3">
+            <div className="rounded-xl border bg-card p-5 text-center">
+              <p className="text-2xl font-semibold text-primary">Automático</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Sin registrar gastos a mano. Kipu lee tus notificaciones.
+              </p>
+            </div>
+            <div className="rounded-xl border bg-card p-5 text-center">
+              <p className="text-2xl font-semibold text-primary">Clasificado</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Cada consumo va a su categoría y a tu tarjeta o cuenta.
+              </p>
+            </div>
+            <div className="rounded-xl border bg-card p-5 text-center">
+              <p className="text-2xl font-semibold text-primary">Visible</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Dashboards mensuales y resúmenes en Telegram para decidir mejor.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section className="mx-auto w-full max-w-5xl px-6 pb-16">
         <h2 className="mb-6 text-center text-2xl font-semibold">
           ¿Cómo funciona?
