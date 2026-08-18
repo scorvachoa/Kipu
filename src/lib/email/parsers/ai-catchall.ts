@@ -241,6 +241,20 @@ function normalizeTime(raw: string | undefined): string | undefined {
   return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
 }
 
+function redactSensitiveData(text: string): string {
+  let out = text;
+  out = out.replace(
+    /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi,
+    "[correo oculto]",
+  );
+  out = out.replace(/\b(?:\d{4}[\s-]?){3}\d{4}\b/g, (match) => {
+    const digits = match.replace(/\D/g, "");
+    return `**** **** **** ${digits.slice(-4)}`;
+  });
+  out = out.replace(/\b\d{16}\b/g, (match) => `**** ${match.slice(-4)}`);
+  return out;
+}
+
 function sanitizeMerchant(raw: string | undefined): string | undefined {
   if (!raw) {
     return undefined;
@@ -275,8 +289,9 @@ export async function parseEmailWithAi(
     return [];
   }
 
-  const fragments = extractTextFragments(extractSource(email));
-  const fullText = canonicalText(fragments);
+  const fullText = redactSensitiveData(
+    canonicalText(extractTextFragments(extractSource(email))),
+  );
   const prompt = [
     "Eres el extractor de transacciones bancarias de Kipu. Parseas correos de bancos peruanos (BCP, Interbank, BBVA, Scotiabank, BanBif, MiBanco, cajas, financieras, billeteras como Yape/Plin/Tunki, etc.).",
     "",

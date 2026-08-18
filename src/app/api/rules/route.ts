@@ -7,12 +7,28 @@ import { suggestRule } from "@/lib/ai/rule-suggest";
 import { createMerchantRule } from "@/lib/supabase/merchant-rule";
 import { normalizeMerchant } from "@/lib/email/merchant";
 import { error, json } from "@/lib/http";
+import { rateLimit } from "@/lib/security/rate-limit";
+
+const RULE_WINDOW_MS = 60 * 60 * 1000;
+const RULE_MAX_PER_WINDOW = 20;
 
 export async function POST(request: Request) {
   const user = await getUser();
   if (!user) {
     return error("No autorizado", 401);
   }
+
+  const limited = rateLimit(`rules:${user.id}`, {
+    limit: RULE_MAX_PER_WINDOW,
+    windowMs: RULE_WINDOW_MS,
+  });
+  if (!limited.allowed) {
+    return error(
+      "Demasiadas solicitudes. Intenta de nuevo en un momento.",
+      429,
+    );
+  }
+
   const body = await request.json().catch(() => null);
   const merchant = typeof body?.merchant === "string" ? body.merchant : "";
   const merchantName = merchant.trim();

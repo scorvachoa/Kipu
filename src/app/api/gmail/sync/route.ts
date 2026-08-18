@@ -5,13 +5,28 @@ import {
   normalizeRange,
   syncUserGmail,
 } from "@/lib/gmail/sync-service";
+import { rateLimit } from "@/lib/security/rate-limit";
 
 export const maxDuration = 60;
+
+const SYNC_WINDOW_MS = 60 * 1000;
+const SYNC_MAX_PER_WINDOW = 10;
 
 export async function POST(request: Request) {
   const user = await getUser();
   if (!user) {
     return error("No autorizado", 401);
+  }
+
+  const limited = rateLimit(`gmail-sync:${user.id}`, {
+    limit: SYNC_MAX_PER_WINDOW,
+    windowMs: SYNC_WINDOW_MS,
+  });
+  if (!limited.allowed) {
+    return error(
+      "Demasiadas solicitudes de sincronización. Intenta de nuevo en un momento.",
+      429,
+    );
   }
 
   let explicitRange: unknown;

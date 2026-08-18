@@ -29,7 +29,8 @@ export async function PATCH(
     .select()
     .single();
   if (dbError) {
-    return error(dbError.message, 500);
+    console.error("PATCH /api/categories/[id]:", dbError.message);
+    return error("Error al actualizar la categoría", 500);
   }
   return json(data);
 }

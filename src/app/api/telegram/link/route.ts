@@ -7,11 +7,26 @@ import {
   updateTelegramPrefs,
 } from "@/lib/supabase/telegram-adapter";
 import { getTelegramBotInfo } from "@/lib/telegram/client";
+import { rateLimit } from "@/lib/security/rate-limit";
+
+const LINK_CODE_WINDOW_MS = 60 * 1000;
+const LINK_CODE_MAX_PER_WINDOW = 5;
 
 export async function POST() {
   const user = await getUser();
   if (!user) {
     return error("No autorizado", 401);
+  }
+
+  const limited = rateLimit(`telegram-link:${user.id}`, {
+    limit: LINK_CODE_MAX_PER_WINDOW,
+    windowMs: LINK_CODE_WINDOW_MS,
+  });
+  if (!limited.allowed) {
+    return error(
+      "Demasiadas solicitudes. Intenta de nuevo en un momento.",
+      429,
+    );
   }
 
   if (!process.env.TELEGRAM_BOT_TOKEN) {

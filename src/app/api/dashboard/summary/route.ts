@@ -19,7 +19,8 @@ export async function GET(request: Request) {
   const supabase = await createClient();
   const { data, dbError } = await getMonthSummaryRowsSafe(supabase, user.id, monthKey);
   if (dbError) {
-    return error(dbError, 500);
+    console.error("GET /api/dashboard/summary:", dbError);
+    return error("Error al consultar el resumen", 500);
   }
   return json(aggregateMonthSummary(data, monthKey));
 }

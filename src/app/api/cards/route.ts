@@ -15,7 +15,8 @@ export async function GET() {
     .eq("user_id", user.id)
     .order("created_at", { ascending: true });
   if (dbError) {
-    return error(dbError.message, 500);
+    console.error("GET /api/cards:", dbError.message);
+    return error("Error al listar tarjetas", 500);
   }
   return json(data ?? []);
 }
@@ -37,7 +38,8 @@ export async function POST(request: Request) {
     .select()
     .single();
   if (dbError) {
-    return error(dbError.message, 500);
+    console.error("POST /api/cards:", dbError.message);
+    return error("Error al crear la tarjeta", 500);
   }
   return json(data, 201);
 }

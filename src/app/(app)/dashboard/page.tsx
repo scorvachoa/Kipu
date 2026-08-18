@@ -26,7 +26,7 @@ export default async function DashboardPage({
   const monthKey = isValidMonthKey(month) ? month : currentMonthKey();
   const [rows, gmail] = await Promise.all([
     getMonthSummaryRows(supabase, user.id, monthKey),
-    getGmailConnection(supabase, user.id),
+    getGmailConnection(user.id),
   ]);
 
   const summary = aggregateMonthSummary(rows, monthKey);

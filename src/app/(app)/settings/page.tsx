@@ -13,8 +13,8 @@ export default async function SettingsPage() {
   const user = await requireUserOrRedirect();
   const supabase = await createClient();
   const [gmail, telegram, people] = await Promise.all([
-    getGmailConnection(supabase, user.id),
-    getTelegramConnection(supabase, user.id),
+    getGmailConnection(user.id),
+    getTelegramConnection(user.id),
     listPeople(supabase, user.id),
   ]);
 

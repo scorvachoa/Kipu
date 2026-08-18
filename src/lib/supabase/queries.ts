@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
 import type { SummaryTx } from "@/lib/finance/summary";
 import { monthKeyToRange } from "@/lib/finance/summary";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export interface TransactionFilters {
   monthKey?: string;
@@ -66,10 +67,10 @@ export interface TelegramConnectionStatus {
 }
 
 export async function getTelegramConnection(
-  supabase: SupabaseClient<Database>,
   userId: string,
 ): Promise<TelegramConnectionStatus> {
-  const { data, error } = await supabase
+  const admin = createAdminClient();
+  const { data, error } = await admin
     .from("telegram_links")
     .select(
       "telegram_user_id, notify_new_expenses, notify_payments, notify_needs_review",
@@ -213,10 +214,10 @@ export async function listPeople(
 }
 
 export async function getGmailConnection(
-  supabase: SupabaseClient<Database>,
   userId: string,
 ): Promise<GmailConnectionStatus> {
-  const { data, error } = await supabase
+  const admin = createAdminClient();
+  const { data, error } = await admin
     .from("gmail_connections")
     .select("email_address, last_sync_at, revoked_at")
     .eq("user_id", userId)

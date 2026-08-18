@@ -29,7 +29,8 @@ export async function PATCH(
     .select()
     .single();
   if (dbError) {
-    return error(dbError.message, 500);
+    console.error("PATCH /api/cards/[id]:", dbError.message);
+    return error("Error al actualizar la tarjeta", 500);
   }
   return json(data);
 }

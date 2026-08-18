@@ -18,7 +18,8 @@ export async function GET() {
     .eq("active", DEFAULT_ACTIVE)
     .order("name", { ascending: true });
   if (dbError) {
-    return error(dbError.message, 500);
+    console.error("GET /api/categories:", dbError.message);
+    return error("Error al listar categorías", 500);
   }
   return json(data ?? []);
 }
@@ -40,7 +41,8 @@ export async function POST(request: Request) {
     .select()
     .single();
   if (dbError) {
-    return error(dbError.message, 500);
+    console.error("POST /api/categories:", dbError.message);
+    return error("Error al crear la categoría", 500);
   }
   return json(data, 201);
 }

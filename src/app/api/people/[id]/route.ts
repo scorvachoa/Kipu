@@ -21,7 +21,8 @@ export async function DELETE(
     .eq("id", id)
     .eq("user_id", user.id);
   if (dbError) {
-    return error(dbError.message, 500);
+    console.error("DELETE /api/people/[id]:", dbError.message);
+    return error("Error al eliminar la persona", 500);
   }
   return json({ ok: true });
 }
