@@ -40,7 +40,15 @@ const TYPE_LABELS: Record<string, string> = {
   other: "Otro",
 };
 
-function SuggestRuleButton({ merchant }: { merchant: string | null }) {
+function SuggestRuleButton({
+  merchant,
+  transactionId,
+  onApplied,
+}: {
+  merchant: string | null;
+  transactionId?: string;
+  onApplied?: () => void;
+}) {
   const [state, setState] = useState<"idle" | "loading" | "done" | "error">(
     "idle",
   );
@@ -75,7 +83,7 @@ function SuggestRuleButton({ merchant }: { merchant: string | null }) {
           const response = await fetch("/api/rules", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ merchant }),
+            body: JSON.stringify({ merchant, transactionId }),
           });
           if (!response.ok) {
             setState("error");
@@ -91,6 +99,7 @@ function SuggestRuleButton({ merchant }: { merchant: string | null }) {
               ? `Regla → ${data.category_name}`
               : "Regla creada",
           );
+          onApplied?.();
         } catch {
           setState("error");
           setMessage("Error de red");
@@ -326,7 +335,11 @@ export function TransactionsView({
                             </span>
                           )}
                           {!t.categories?.name ? (
-                            <SuggestRuleButton merchant={t.merchant} />
+                            <SuggestRuleButton
+                              merchant={t.merchant}
+                              transactionId={t.id}
+                              onApplied={() => router.refresh()}
+                            />
                           ) : null}
                         </TableCell>
                         <TableCell className="whitespace-nowrap text-muted-foreground">
@@ -411,7 +424,11 @@ export function TransactionsView({
                       {t.categories?.name ?? "Sin categoría"}
                     </Badge>
                     {!t.categories?.name ? (
-                      <SuggestRuleButton merchant={t.merchant} />
+                      <SuggestRuleButton
+                        merchant={t.merchant}
+                        transactionId={t.id}
+                        onApplied={() => router.refresh()}
+                      />
                     ) : null}
                     {t.cards ? <Badge variant="outline">{t.cards.name}</Badge> : null}
                     {t.people ? <Badge variant="outline">{t.people.name}</Badge> : null}

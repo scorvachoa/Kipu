@@ -1,8 +1,11 @@
 import { getUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@/types/database";
 import { listCategories } from "@/lib/supabase/queries";
 import { suggestRule } from "@/lib/ai/rule-suggest";
 import { createMerchantRule } from "@/lib/supabase/merchant-rule";
+import { normalizeMerchant } from "@/lib/email/merchant";
 import { error, json } from "@/lib/http";
 
 export async function POST(request: Request) {
@@ -16,6 +19,8 @@ export async function POST(request: Request) {
   if (!merchantName) {
     return error("Falta el comercio", 422);
   }
+  const transactionId =
+    typeof body?.transactionId === "string" ? body.transactionId : null;
 
   const supabase = await createClient();
   const categories = await listCategories(supabase, user.id);
@@ -42,6 +47,14 @@ export async function POST(request: Request) {
     return error("No se pudo guardar la regla", 500);
   }
 
+  await applyRuleToTransactions(
+    supabase,
+    user.id,
+    suggestion.merchant_pattern,
+    suggestion.category_id,
+    transactionId,
+  ).catch(() => {});
+
   const category = categories.find((c) => c.id === suggestion.category_id);
   return json(
     {
@@ -52,4 +65,28 @@ export async function POST(request: Request) {
     },
     201,
   );
+}
+
+async function applyRuleToTransactions(
+  supabase: SupabaseClient<Database>,
+  userId: string,
+  pattern: string,
+  categoryId: string,
+  transactionId: string | null,
+): Promise<void> {
+  const normalized = normalizeMerchant(pattern) ?? pattern;
+
+  if (transactionId) {
+    await supabase
+      .from("transactions")
+      .update({ category_id: categoryId, status: "confirmed" })
+      .eq("user_id", userId)
+      .eq("id", transactionId);
+  }
+
+  await supabase
+    .from("transactions")
+    .update({ category_id: categoryId, status: "confirmed" })
+    .eq("user_id", userId)
+    .ilike("normalized_merchant", `%${normalized}%`);
 }
