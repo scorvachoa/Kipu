@@ -15,6 +15,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { GoogleIcon } from "@/components/auth/google-icon";
 
 type Mode = "login" | "register";
 
@@ -204,10 +205,11 @@ export function LoginForm() {
         <Button
           type="button"
           variant="outline"
-          className="w-full"
+          className="h-11 w-full justify-center gap-2.5 rounded-xl text-[0.95rem] font-medium shadow-sm transition-all hover:shadow-md sm:h-11"
           disabled={loading}
           onClick={handleGoogle}
         >
+          <GoogleIcon className="size-5 shrink-0" />
           Continuar con Google
         </Button>
 

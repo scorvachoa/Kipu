@@ -271,11 +271,24 @@ export default async function WelcomePage() {
       </section>
 
       <footer className="border-t px-6 py-6 text-center text-xs text-muted-foreground">
-        <span className="inline-flex items-center gap-2">
-          <CategoryIcon name="MoreHorizontal" className="h-3.5 w-3.5" />
-          Kipu · Finanzas personales con Gmail + IA ·{" "}
-          <Zap className="h-3.5 w-3.5" />
-        </span>
+        <div className="mx-auto flex w-full max-w-5xl flex-col items-center justify-between gap-3 sm:flex-row">
+          <span className="inline-flex items-center gap-2">
+            <CategoryIcon name="MoreHorizontal" className="h-3.5 w-3.5" />
+            Kipu · Finanzas personales con Gmail + IA ·{" "}
+            <Zap className="h-3.5 w-3.5" />
+          </span>
+          <span className="inline-flex items-center gap-4">
+            <Link
+              href="/privacy"
+              className="underline-offset-2 hover:underline"
+            >
+              Política de Privacidad
+            </Link>
+            <Link href="/terms" className="underline-offset-2 hover:underline">
+              Condiciones del Servicio
+            </Link>
+          </span>
+        </div>
       </footer>
     </main>
   );
