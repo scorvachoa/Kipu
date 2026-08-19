@@ -4,20 +4,31 @@ import type {
   ForecastInput,
   SubscriptionResult,
 } from "@/lib/finance/analysis";
+import { DEFAULT_CURRENCY } from "@/types/shared";
 
-const money = (value: number): string =>
+function isoCurrency(currency: string): string {
+  return { PEN: "PEN", USD: "USD", EUR: "EUR" }[currency] ?? DEFAULT_CURRENCY;
+}
+
+const money = (value: number, currency: string = DEFAULT_CURRENCY): string =>
   value.toLocaleString("es-PE", {
     style: "currency",
-    currency: "PEN",
+    currency: isoCurrency(currency),
     minimumFractionDigits: 2,
   });
 
 const MONEY_RE = /^\d{1,3}(\.\d{3})*(,\d{2})?$/;
 
-function safeMoney(value: number): string {
-  const formatted = money(value);
-  return MONEY_RE.test(formatted.replace("S/ ", "")) ||
-    MONEY_RE.test(formatted.replace("PEN ", ""))
+function safeMoney(value: number, currency: string = DEFAULT_CURRENCY): string {
+  const formatted = money(value, currency);
+  const stripped = formatted
+    .replace("S/ ", "")
+    .replace("PEN ", "")
+    .replace("$ ", "")
+    .replace("USD ", "")
+    .replace("€ ", "")
+    .replace("EUR ", "");
+  return MONEY_RE.test(stripped)
     ? formatted
     : String(Math.round(value));
 }
@@ -33,9 +44,9 @@ export async function anomaliesTexto(
     .map((a) => {
       const merchant = a.merchant ?? a.categoryName ?? "transacción";
       if (a.merchantAverage !== null && a.merchantMultiplier !== null) {
-        return `- ${merchant}: ${safeMoney(a.amount)} (tu promedio es ${safeMoney(a.merchantAverage)}; ~${a.merchantMultiplier.toFixed(1)}x lo habitual)`;
+        return `- ${merchant}: ${safeMoney(a.amount, a.currency)} (tu promedio es ${safeMoney(a.merchantAverage, a.currency)}; ~${a.merchantMultiplier.toFixed(1)}x lo habitual)`;
       }
-      return `- ${merchant}: ${safeMoney(a.amount)} (muy superior al promedio de ${a.categoryName ?? "su categoría"})`;
+      return `- ${merchant}: ${safeMoney(a.amount, a.currency)} (muy superior al promedio de ${a.categoryName ?? "su categoría"})`;
     })
     .join("\n");
 

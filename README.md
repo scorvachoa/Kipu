@@ -9,8 +9,13 @@ Control de finanzas personales. Kipu sincroniza tus movimientos bancarios (BCP e
 - Sincronización de transacciones desde Gmail (OAuth) para BCP e Interbank.
 - Parseo de notificaciones reales: consumos, retiros de cajero, pagos de servicios/tarjeta, transferencias, yapeos recibidos y movimientos de wardadito.
 - Dashboard mensual: total de gastos, desglose por tarjeta y categoría, últimos movimientos.
+- **Totales por moneda** (PEN/USD/EUR): los resúmenes del dashboard y del bot muestran cada moneda por separado.
+- **Ingresos y saldo neto del mes** en el dashboard (incluye reembolsos).
+- **Gráfico de tendencia**: gasto de los últimos 6 meses.
+- **Presupuestos por categoría con barra de progreso** desde Ajustes → Categorías; el límite es mensual y opcional.
 - **Categorías editables con color e icono** (iconos Lucide) desde Ajustes → Categorías.
 - Gestión de tarjetas, cuentas, personas y reglas de comercios → categorías.
+- **Exportar movimientos a CSV** (con los filtros aplicados) desde la página de Transacciones.
 - **Tema claro/oscuro** con persistencia y sin parpadeo al cargar (toggle en toda la app).
 - **Landing de bienvenida** con preview del dashboard y acceso a login/registro.
 - Bot de Telegram: vincula tu cuenta y consulta `/resumen`, `/gastos`, `/tarjetas`, `/categorias` o `/sincronizar` desde el chat.
@@ -31,7 +36,7 @@ Control de finanzas personales. Kipu sincroniza tus movimientos bancarios (BCP e
 
 ## Configuración
 
-1. Crea un proyecto en Supabase y aplica las migraciones de `supabase/migrations/` en orden (incluida la `005_category_color.sql`, necesaria para las categorías con color).
+1. Crea un proyecto en Supabase y aplica las migraciones de `supabase/migrations/` en orden (incluidas la `005_category_color.sql`, necesaria para las categorías con color, y la `008_category_budget.sql` para los presupuestos).
 2. Crea un proyecto OAuth en Google Cloud con acceso a la API de Gmail y configura la pantalla de consentimiento.
 3. Copia `.env.example` a `.env.local` y completa las variables (tabla abajo). `.env.example` es la plantilla versionada: los valores reales quedan fuera del repo.
 4. Instala dependencias y arranca:
@@ -81,6 +86,9 @@ Aplica las migraciones en orden desde el **SQL Editor** o con la CLI:
 3. `003_income_type.sql` — soporte de transacciones de ingreso.
 4. `004_telegram_link_codes.sql` — códigos de vinculación para Telegram.
 5. `005_category_color.sql` — columna `color` en `categories` (para las categorías con color).
+6. `006_gmail_sync_cursor.sql` — cursor de Gmail para sincronización incremental por lotes.
+7. `007_restrict_sensitive_table_rls.sql` — bloqueo de acceso anónimo a Gmail/Telegram (service role solamente).
+8. `008_category_budget.sql` — columna `monthly_budget` en `categories` (presupuesto mensual).
 
 ## Scripts
 

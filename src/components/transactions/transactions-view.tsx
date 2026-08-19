@@ -3,7 +3,7 @@
 import { useCallback, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Search, X } from "lucide-react";
+import { Download, Search, X } from "lucide-react";
 import { formatMoney, formatDateTime, monthOptions, cardNameWithLast4 } from "@/lib/format";
 import { CategoryIcon } from "@/components/category-icon";
 import { monthLabel } from "@/lib/finance/summary";
@@ -127,6 +127,30 @@ export function TransactionsView({
   const searchParams = useSearchParams();
   const hasFilters = searchParams.size > 0;
 
+  const [exporting, setExporting] = useState(false);
+
+  async function exportCsv() {
+    setExporting(true);
+    try {
+      const params = new URLSearchParams(searchParams.toString());
+      const res = await fetch(`/api/transactions/export?${params.toString()}`);
+      if (!res.ok) {
+        return;
+      }
+      const blob = await res.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = objectUrl;
+      link.download = "kipu-transacciones.csv";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(objectUrl);
+    } finally {
+      setExporting(false);
+    }
+  }
+
   const update = useCallback(
     (key: string, value: string) => {
       const params = new URLSearchParams(searchParams.toString());
@@ -158,9 +182,15 @@ export function TransactionsView({
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-2xl font-semibold">Transacciones</h1>
-        <p className="text-sm text-muted-foreground">{rows.length} movimientos</p>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold">Transacciones</h1>
+          <p className="text-sm text-muted-foreground">{rows.length} movimientos</p>
+        </div>
+        <Button variant="outline" size="sm" onClick={exportCsv} disabled={exporting}>
+          <Download className="h-4 w-4" />
+          {exporting ? "Exportando…" : "Exportar CSV"}
+        </Button>
       </div>
 
       <Card>

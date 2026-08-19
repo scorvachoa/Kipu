@@ -1,12 +1,26 @@
 import { generateJSON } from "@/lib/ai/generate-json";
 import type { MonthSummary } from "@/lib/finance/summary";
+import { DEFAULT_CURRENCY } from "@/types/shared";
 
-const money = (value: number): string =>
+function isoCurrency(currency: string): string {
+  return { PEN: "PEN", USD: "USD", EUR: "EUR" }[currency] ?? DEFAULT_CURRENCY;
+}
+
+const money = (value: number, currency: string = DEFAULT_CURRENCY): string =>
   value.toLocaleString("es-PE", {
     style: "currency",
-    currency: "PEN",
+    currency: isoCurrency(currency),
     minimumFractionDigits: 2,
   });
+
+function totalsText(totals: Record<string, number>): string {
+  const entries = Object.entries(totals).filter(([, amount]) => amount !== 0);
+  if (entries.length === 0) {
+    return money(0);
+  }
+  entries.sort((a, b) => b[1] - a[1]);
+  return entries.map(([currency, amount]) => money(amount, currency)).join(" + ");
+}
 
 export interface NaturalQueryContext {
   question: string;
@@ -21,7 +35,7 @@ export async function answerNaturalQuery(
 
   const topCategories = summary.categoryBreakdown
     .slice(0, 5)
-    .map((c) => `${c.name}: ${money(c.total)}`)
+    .map((c) => `${c.name}: ${money(c.total, c.currency)}`)
     .join("; ");
   const recent = transactions
     .slice(0, 10)
@@ -34,7 +48,7 @@ export async function answerNaturalQuery(
   const prompt = [
     "Eres el asistente financiero de Kipu. Respondes preguntas sobre las finanzas del usuario con los datos que se te dan.",
     "",
-    `Resumen del mes: total gastado ${money(summary.totalExpenses)} en ${summary.transactionCount} movimientos (crédito ${money(summary.creditExpenses)}, débito ${money(summary.debitExpenses)}).`,
+    `Resumen del mes: total gastado ${totalsText(summary.totalExpensesByCurrency)} en ${summary.transactionCount} movimientos (ingresos ${totalsText(summary.totalIncomeByCurrency)}, saldo neto ${money(summary.netBalance, summary.baseCurrency)}, crédito ${totalsText(summary.creditExpensesByCurrency)}, débito ${totalsText(summary.debitExpensesByCurrency)}).`,
     `Categorías: ${topCategories || "sin datos"}.`,
     transactions.length > 0 ? `Movimientos recientes:\n${recent}` : "Sin movimientos recientes.",
     "",

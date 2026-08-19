@@ -29,15 +29,18 @@ export async function POST(request: Request) {
     );
   }
 
-  let explicitRange: unknown;
+  let body: { range?: unknown; fromLastSync?: unknown } = {};
   try {
-    const body = (await request.json()) as { range?: unknown };
-    explicitRange = body.range;
+    body = (await request.json()) as typeof body;
   } catch {
   }
 
+  const fromLastSync = body.fromLastSync === true;
+
   try {
-    const outcome = await syncUserGmail(user.id, normalizeRange(explicitRange));
+    const outcome = await syncUserGmail(user.id, normalizeRange(fromLastSync ? undefined : body.range), {
+      fromLastSync,
+    });
     return json({
       emailsFound: outcome.emailsFound,
       emailsProcessed: outcome.emailsProcessed,

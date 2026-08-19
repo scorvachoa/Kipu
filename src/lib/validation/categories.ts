@@ -9,6 +9,7 @@ export const createCategorySchema = z.object({
     .regex(/^#[0-9a-fA-F]{6}$/)
     .nullable()
     .optional(),
+  monthly_budget: z.number().min(0).nullable().optional(),
 });
 
 export const updateCategorySchema = z
@@ -21,5 +22,6 @@ export const updateCategorySchema = z
       .regex(/^#[0-9a-fA-F]{6}$/)
       .nullable()
       .optional(),
+    monthly_budget: z.number().min(0).nullable().optional(),
   })
   .partial();

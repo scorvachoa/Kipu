@@ -24,6 +24,30 @@ export function formatMoney(
   return `${currencySymbol(currency)} ${formatted}`;
 }
 
+export function formatMoneyMany(
+  totals: Record<string, number>,
+  defaultCurrency: string = DEFAULT_CURRENCY,
+): string {
+  const entries = Object.entries(totals).filter(([, amount]) => amount !== 0);
+  if (entries.length === 0) {
+    return formatMoney(0, defaultCurrency);
+  }
+  entries.sort(([aCurrency, aAmount], [bCurrency, bAmount]) => {
+    if (aCurrency === defaultCurrency && bCurrency !== defaultCurrency) return -1;
+    if (bCurrency === defaultCurrency && aCurrency !== defaultCurrency) return 1;
+    return bAmount - aAmount;
+  });
+  return entries
+    .map(([currency, amount]) => formatMoney(amount, currency))
+    .join(" + ");
+}
+
+export function monthShortLabel(monthKey: string): string {
+  const [year, month] = monthKey.split("-").map(Number);
+  const date = new Date(year, month - 1, 1);
+  return date.toLocaleDateString("es-PE", { month: "short" });
+}
+
 export function formatDateShort(date: string): string {
   const [year, month, day] = date.split("-");
   return `${day}/${month}/${year.slice(2)}`;

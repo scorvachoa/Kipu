@@ -1,6 +1,6 @@
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
-import { formatMoney } from "@/lib/format";
+import { formatMoney, formatMoneyMany } from "@/lib/format";
 import type { MonthSummary } from "@/lib/finance/summary";
 import { monthLabel } from "@/lib/finance/summary";
 import { formatTransactionDate } from "@/lib/finance/time";
@@ -104,19 +104,25 @@ export function formatMonthSummary(summary: MonthSummary): string {
   const lines = [`📊 Kipu — ${monthLabel(summary.monthKey)}`, ""];
 
   lines.push(`💰 Gastos:`);
-  lines.push(formatMoney(summary.totalExpenses));
+  lines.push(formatMoneyMany(summary.totalExpensesByCurrency, summary.baseCurrency));
   lines.push("");
   lines.push(`💳 Crédito:`);
-  lines.push(formatMoney(summary.creditExpenses));
+  lines.push(formatMoneyMany(summary.creditExpensesByCurrency, summary.baseCurrency));
   lines.push("");
   lines.push(`💵 Débito:`);
-  lines.push(formatMoney(summary.debitExpenses));
+  lines.push(formatMoneyMany(summary.debitExpensesByCurrency, summary.baseCurrency));
+  lines.push("");
+  lines.push(`💰 Ingresos:`);
+  lines.push(formatMoneyMany(summary.totalIncomeByCurrency, summary.baseCurrency));
+  lines.push("");
+  lines.push(`📊 Saldo neto:`);
+  lines.push(formatMoney(summary.netBalance, summary.baseCurrency));
 
   if (summary.categoryBreakdown.length > 0) {
     lines.push("");
     for (const category of summary.categoryBreakdown.slice(0, 5)) {
       lines.push(`${categoryEmoji(category.icon)} ${category.name}:`);
-      lines.push(formatMoney(category.total));
+      lines.push(formatMoney(category.total, category.currency));
     }
   }
 

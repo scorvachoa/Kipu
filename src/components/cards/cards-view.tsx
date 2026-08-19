@@ -2,14 +2,13 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, CreditCard } from "lucide-react";
+import { Plus, CreditCard, Pencil } from "lucide-react";
 import { BANK_NAMES, CARD_TYPES, CURRENCIES } from "@/types/shared";
 import type { CardWithOwner, Person } from "@/lib/supabase/queries";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -32,6 +31,24 @@ const TYPE_LABELS: Record<string, string> = {
   debit: "Débito",
 };
 
+const BANK_BORDERS: Record<string, string> = {
+  BCP: "border-indigo-500",
+  INTERBANK: "border-emerald-500",
+  "BCP IO": "border-slate-500",
+  BBVA: "border-blue-500",
+  SCOTIABANK: "border-rose-500",
+  MIBANCO: "border-violet-500",
+  BANBIF: "border-cyan-500",
+  "BANCO DE LA NACION": "border-amber-500",
+  CAJA: "border-orange-500",
+  FINANCIERA: "border-fuchsia-500",
+  OTRO: "border-slate-400",
+};
+
+function bankBorder(bank: string): string {
+  return BANK_BORDERS[bank.toUpperCase()] ?? BANK_BORDERS.OTRO;
+}
+
 interface CardForm {
   bank: string;
   name: string;
@@ -44,7 +61,7 @@ interface CardForm {
 }
 
 const EMPTY_FORM: CardForm = {
-  bank: BANK_NAMES[0],
+  bank: "",
   name: "",
   card_type: "credit",
   last4: "",
@@ -63,12 +80,36 @@ export function CardsView({
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [editingCard, setEditingCard] = useState<CardWithOwner | null>(null);
   const [form, setForm] = useState<CardForm>(EMPTY_FORM);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   function set(name: keyof CardForm, value: string) {
     setForm((prev) => ({ ...prev, [name]: value }));
+  }
+
+  function openCreate() {
+    setEditingCard(null);
+    setForm(EMPTY_FORM);
+    setError(null);
+    setOpen(true);
+  }
+
+  function openEdit(card: CardWithOwner) {
+    setEditingCard(card);
+    setForm({
+      bank: card.bank,
+      name: card.name,
+      card_type: card.card_type,
+      last4: card.last4,
+      owner_person_id: card.owner_person_id ?? "",
+      currency: card.currency ?? "PEN",
+      closing_day: card.closing_day != null ? String(card.closing_day) : "",
+      payment_day: card.payment_day != null ? String(card.payment_day) : "",
+    });
+    setError(null);
+    setOpen(true);
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -87,11 +128,17 @@ export function CardsView({
     if (form.closing_day) payload.closing_day = Number(form.closing_day);
     if (form.payment_day) payload.payment_day = Number(form.payment_day);
 
-    const res = await fetch("/api/cards", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
+    const res = editingCard
+      ? await fetch(`/api/cards/${editingCard.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        })
+      : await fetch("/api/cards", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
     const body = (await res.json()) as { error?: string };
     if (!res.ok) {
       setError(body.error ?? "No se pudo guardar la tarjeta.");
@@ -99,6 +146,7 @@ export function CardsView({
       return;
     }
     setForm(EMPTY_FORM);
+    setEditingCard(null);
     setOpen(false);
     setSubmitting(false);
     router.refresh();
@@ -122,16 +170,21 @@ export function CardsView({
             Tus tarjetas de crédito y débito
           </p>
         </div>
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog open={open} onOpenChange={(o) => {
+          setOpen(o);
+          if (!o) setEditingCard(null);
+        }}>
           <DialogTrigger asChild>
-            <Button>
+            <Button onClick={openCreate}>
               <Plus className="h-4 w-4" />
               Nueva tarjeta
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
-              <DialogTitle>Nueva tarjeta</DialogTitle>
+              <DialogTitle>
+                {editingCard ? "Editar tarjeta" : "Nueva tarjeta"}
+              </DialogTitle>
               <DialogDescription>
                 Las compras de Gmail se vincularán por banco y últimos 4 dígitos.
               </DialogDescription>
@@ -149,23 +202,33 @@ export function CardsView({
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="grid gap-2">
-                  <Label>Banco</Label>
-                  <Select value={form.bank} onValueChange={(v) => set("bank", v)}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {BANK_NAMES.map((b) => (
-                        <SelectItem key={b} value={b}>
-                          {b}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Label htmlFor="card-bank">Banco</Label>
+                  <Input
+                    list="known-banks"
+                    id="card-bank"
+                    placeholder="BCP, INTERBANK, BBVA…"
+                    value={form.bank}
+                    onChange={(e) => set("bank", e.target.value)}
+                    required
+                  />
+                  <datalist id="known-banks">
+                    {BANK_NAMES.map((b) => (
+                      <option key={b} value={b} />
+                    ))}
+                  </datalist>
                 </div>
                 <div className="grid gap-2">
                   <Label>Tipo</Label>
-                  <Select value={form.card_type} onValueChange={(v) => set("card_type", v)}>
+                  <Select
+                    value={form.card_type}
+                    onValueChange={(v) => {
+                      set("card_type", v);
+                      if (v === "debit") {
+                        set("closing_day", "");
+                        set("payment_day", "");
+                      }
+                    }}
+                  >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -238,6 +301,7 @@ export function CardsView({
                     max={31}
                     placeholder="—"
                     value={form.closing_day}
+                    disabled={form.card_type === "debit"}
                     onChange={(e) => set("closing_day", e.target.value)}
                   />
                 </div>
@@ -250,6 +314,7 @@ export function CardsView({
                     max={31}
                     placeholder="—"
                     value={form.payment_day}
+                    disabled={form.card_type === "debit"}
                     onChange={(e) => set("payment_day", e.target.value)}
                   />
                 </div>
@@ -260,7 +325,11 @@ export function CardsView({
                 </Alert>
               ) : null}
               <Button type="submit" disabled={submitting}>
-                {submitting ? "Guardando…" : "Guardar tarjeta"}
+                {submitting
+                  ? "Guardando…"
+                  : editingCard
+                    ? "Guardar cambios"
+                    : "Guardar tarjeta"}
               </Button>
             </form>
           </DialogContent>
@@ -277,28 +346,56 @@ export function CardsView({
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">
           {cards.map((card) => (
-            <Card key={card.id} className={card.active ? "" : "opacity-60"}>
-              <CardHeader className="p-4 pb-2">
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <CardTitle className="text-base">{card.name}</CardTitle>
-                    <p className="text-xs text-muted-foreground">
-                      {card.bank} · {TYPE_LABELS[card.card_type] ?? card.card_type} ····{card.last4}
-                    </p>
-                  </div>
-                  <Badge variant={card.active ? "default" : "secondary"}>
-                    {card.active ? "Activa" : "Inactiva"}
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent className="p-4 pt-2">
-                <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
-                  <p className="text-muted-foreground">
-                    {card.people?.name ?? "Sin dueño"}
-                    {card.currency ? ` · ${card.currency}` : ""}
-                    {card.closing_day ? ` · Cierre día ${card.closing_day}` : ""}
-                    {card.payment_day ? ` · Pago día ${card.payment_day}` : ""}
+            <div
+              key={card.id}
+              className={`flex flex-col overflow-hidden rounded-2xl border-2 bg-card p-5 ${bankBorder(card.bank)} ${card.active ? "" : "opacity-70"}`}
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <p className="text-xs font-medium tracking-widest text-muted-foreground uppercase">
+                    {card.bank}
                   </p>
+                  <p className="mt-0.5 text-base font-semibold">
+                    {card.name}
+                  </p>
+                </div>
+                <div className="flex flex-col items-end gap-1.5">
+                  <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium">
+                    {TYPE_LABELS[card.card_type] ?? card.card_type}
+                  </span>
+                  <span className="rounded-full bg-secondary px-2 py-0.5 text-[11px] text-muted-foreground">
+                    {card.active ? "Activa" : "Inactiva"}
+                  </span>
+                </div>
+              </div>
+              <div className="mt-5 font-mono text-sm tracking-[0.25em] text-muted-foreground">
+                •••• •••• •••• {card.last4}
+              </div>
+              <div className="mt-4 flex items-center justify-between text-sm">
+                <span>{card.people?.name ?? "Sin dueño"}</span>
+                <span className="text-xs text-muted-foreground">
+                  {card.currency ?? "PEN"}
+                </span>
+              </div>
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-border pt-3">
+                {card.closing_day || card.payment_day ? (
+                  <p className="text-xs text-muted-foreground">
+                    {card.closing_day ? `Cierre día ${card.closing_day}` : ""}
+                    {card.closing_day && card.payment_day ? " · " : ""}
+                    {card.payment_day ? `Pago día ${card.payment_day}` : ""}
+                  </p>
+                ) : (
+                  <span className="text-xs text-muted-foreground">
+                    {card.card_type === "debit"
+                      ? "Tarjeta de débito"
+                      : "Crédito"}
+                  </span>
+                )}
+                <div className="flex items-center gap-2">
+                  <Button variant="ghost" size="sm" onClick={() => openEdit(card)}>
+                    <Pencil className="h-3.5 w-3.5" />
+                    Editar
+                  </Button>
                   <Button
                     variant="outline"
                     size="sm"
@@ -307,8 +404,8 @@ export function CardsView({
                     {card.active ? "Desactivar" : "Activar"}
                   </Button>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           ))}
         </div>
       )}

@@ -1,17 +1,22 @@
 import Link from "next/link";
 import {
+  Check,
+  CreditCard,
+  Database,
+  Eye,
+  Globe,
+  ListChecks,
+  ListOrdered,
+  Lock,
   Mail,
   MessageSquare,
-  ShieldCheck,
-  Sparkles,
   RefreshCw,
-  Tag,
-  CreditCard,
-  Zap,
+  ShieldCheck,
   Smartphone,
-  Globe,
-  Lock,
-  Database,
+  Sparkles,
+  Tag,
+  Wand2,
+  Zap,
 } from "lucide-react";
 import { getOptionalUser } from "@/lib/auth";
 import { redirect } from "next/navigation";
@@ -53,25 +58,25 @@ const FEATURES = [
 const STEPS = [
   {
     icon: Mail,
-    title: "1. Conecta tu Gmail",
+    title: "Conecta tu Gmail",
     description:
       "Inicia sesión con tu cuenta y autoriza el acceso de solo lectura a las notificaciones de tus bancos.",
   },
   {
     icon: RefreshCw,
-    title: "2. Sincroniza automáticamente",
+    title: "Sincroniza automáticamente",
     description:
       "Kipu lee los correos de tus bancos y extrae montos, fechas, tarjetas y comercios de forma determinista y con IA de respaldo.",
   },
   {
     icon: Tag,
-    title: "3. Todo clasificado",
+    title: "Todo clasificado",
     description:
       "Las transacciones se categorizan por comercio y se asignan a tu tarjeta o cuenta automáticamente.",
   },
   {
     icon: CreditCard,
-    title: "4. Controla y ahorra",
+    title: "Controla y ahorra",
     description:
       "Revisa tu dashboard mensual, detecta gastos anómalos y suscripciones recurrentes desde la web o Telegram.",
   },
@@ -119,6 +124,133 @@ const SECURITY = [
   },
 ];
 
+const HIGHLIGHTS = [
+  { icon: Wand2, title: "Automático", description: "Sin registrar gastos a mano. Kipu lee tus notificaciones." },
+  { icon: ListChecks, title: "Clasificado", description: "Cada consumo va a su categoría y a tu tarjeta o cuenta." },
+  { icon: Eye, title: "Visible", description: "Dashboards mensuales y resúmenes en Telegram para decidir mejor." },
+];
+
+interface SectionAccent {
+  label: string;
+  icon: React.ElementType;
+  eyebrow: string;
+  chip: string;
+  chipHover: string;
+  number: string;
+}
+
+const ACCENTS: Record<"indigo" | "amber" | "emerald", SectionAccent> = {
+  indigo: {
+    label: "En 4 pasos",
+    icon: ListOrdered,
+    eyebrow: "border-indigo-500/20 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400",
+    chip: "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 ring-1 ring-inset ring-indigo-500/20",
+    chipHover:
+      "group-hover:bg-indigo-500 group-hover:text-white group-hover:ring-indigo-500",
+    number: "text-indigo-500/25",
+  },
+  amber: {
+    label: "Funcionalidades",
+    icon: Sparkles,
+    eyebrow: "border-amber-500/20 bg-amber-500/10 text-amber-600 dark:text-amber-400",
+    chip: "bg-amber-500/10 text-amber-600 dark:text-amber-400 ring-1 ring-inset ring-amber-500/20",
+    chipHover:
+      "group-hover:bg-amber-500 group-hover:text-white group-hover:ring-amber-500",
+    number: "text-amber-500/25",
+  },
+  emerald: {
+    label: "Tus datos protegidos",
+    icon: ShieldCheck,
+    eyebrow: "border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+    chip: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 ring-1 ring-inset ring-emerald-500/20",
+    chipHover:
+      "group-hover:bg-emerald-500 group-hover:text-white group-hover:ring-emerald-500",
+    number: "text-emerald-500/25",
+  },
+};
+
+function SectionHeader({
+  accent,
+  title,
+  subtitle,
+}: {
+  accent: SectionAccent;
+  title: string;
+  subtitle?: string;
+}) {
+  return (
+    <div className="mb-10 text-center">
+      <span
+        className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium ${accent.eyebrow}`}
+      >
+        <accent.icon className="size-3.5" />
+        {accent.label}
+      </span>
+      <h2 className="mt-3 text-2xl font-semibold tracking-tight lg:text-3xl">
+        {title}
+      </h2>
+      {subtitle ? (
+        <p className="mx-auto mt-2 max-w-xl text-sm text-muted-foreground">
+          {subtitle}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+function FeatureCard({
+  icon: Icon,
+  title,
+  description,
+  accent,
+}: {
+  icon: React.ElementType;
+  title: string;
+  description: string;
+  accent: SectionAccent;
+}) {
+  return (
+    <div className="group flex h-full flex-col gap-3 rounded-xl border bg-card p-5 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-lg">
+      <span
+        className={`flex h-11 w-11 items-center justify-center rounded-xl transition-colors duration-200 ${accent.chip} ${accent.chipHover}`}
+      >
+        <Icon className="size-5" />
+      </span>
+      <h3 className="font-semibold">{title}</h3>
+      <p className="text-sm text-muted-foreground">{description}</p>
+    </div>
+  );
+}
+
+function StepCard({
+  icon: Icon,
+  index,
+  title,
+  description,
+  accent,
+}: {
+  icon: React.ElementType;
+  index: number;
+  title: string;
+  description: string;
+  accent: SectionAccent;
+}) {
+  return (
+    <div className="group relative flex h-full flex-col gap-3 rounded-xl border bg-card p-5 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-lg">
+      <div className="flex items-center justify-between">
+        <span
+          className={`flex h-11 w-11 items-center justify-center rounded-xl transition-colors duration-200 ${accent.chip} ${accent.chipHover}`}
+        >
+          <Icon className="size-5" />
+        </span>
+        <span className={`text-4xl font-bold ${accent.number}`}>{index}</span>
+      </div>
+      <h3 className="font-semibold">{title}</h3>
+      <p className="text-sm text-muted-foreground">{description}</p>
+    </div>
+  );
+}
+
 export default async function WelcomePage() {
   const user = await getOptionalUser();
   if (user) {
@@ -126,7 +258,7 @@ export default async function WelcomePage() {
   }
 
   return (
-    <main className="min-h-dvh flex flex-col">
+    <main className="min-h-dvh overflow-x-clip flex flex-col">
       <header className="sticky top-0 z-20 border-b bg-background/95 backdrop-blur">
         <div className="mx-auto flex w-full max-w-5xl items-center justify-between px-6 py-4">
           <div className="flex items-center gap-2 text-lg font-semibold">
@@ -135,47 +267,65 @@ export default async function WelcomePage() {
           </div>
           <nav className="flex items-center gap-2">
             <ThemeToggle />
-            <Button asChild variant="ghost">
+            <Button asChild variant="ghost" size="sm">
               <Link href="/login">Iniciar sesión</Link>
             </Button>
-            <Button asChild>
+            <Button asChild size="sm">
               <Link href="/login?mode=register">Crear cuenta</Link>
             </Button>
           </nav>
         </div>
       </header>
 
-      <section className="mx-auto flex w-full max-w-5xl flex-col items-center gap-6 px-6 py-16 text-center">
-        <div className="inline-flex items-center gap-2 rounded-full border bg-muted/50 px-3 py-1 text-xs text-muted-foreground">
-          <Sparkles className="size-3.5" />
-          Tu dinero bajo control, sin esfuerzo
-        </div>
-        <h1 className="max-w-2xl text-4xl font-bold tracking-tight sm:text-5xl">
-          Tus gastos personales, organizados automáticamente
-        </h1>
-        <p className="max-w-xl text-muted-foreground">
-          Kipu lee las notificaciones de tus bancos en Gmail, las clasifica por
-          categoría y tarjeta, y te muestra un dashboard mensual con tus gastos.
-          Así de simple.
-        </p>
-        <div className="flex flex-wrap items-center justify-center gap-3">
-          <Button asChild size="lg" className="h-11 px-6">
-            <Link href="/login?mode=register">Crear cuenta gratis</Link>
-          </Button>
-          <Button asChild variant="outline" size="lg" className="h-11 px-6">
-            <Link href="/login">Iniciar sesión</Link>
-          </Button>
+      <section className="relative mx-auto w-full max-w-5xl px-6 pt-16 pb-10 text-center sm:pt-24">
+        <div className="relative">
+          <div className="inline-flex items-center gap-2 rounded-full border bg-background/80 px-3 py-1 text-xs font-medium text-muted-foreground shadow-sm backdrop-blur">
+            <Sparkles className="size-3.5 text-amber-500" />
+            Tu dinero bajo control, sin esfuerzo
+          </div>
+          <h1 className="mx-auto mt-6 max-w-3xl text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
+            Tus gastos personales,{" "}
+            <span className="bg-linear-to-r from-amber-500 to-orange-500 bg-clip-text text-transparent">
+              organizados
+            </span>{" "}
+            automáticamente
+          </h1>
+          <p className="mx-auto mt-6 max-w-xl text-base text-muted-foreground sm:text-lg">
+            Kipu lee las notificaciones de tus bancos en Gmail, las clasifica
+            por categoría y tarjeta, y te muestra un dashboard mensual con tus
+            gastos. Así de simple.
+          </p>
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+            <Button asChild size="lg" className="h-11 px-6 shadow-lg shadow-primary/10">
+              <Link href="/login?mode=register">Crear cuenta gratis</Link>
+            </Button>
+            <Button asChild variant="outline" size="lg" className="h-11 px-6">
+              <Link href="/login">Iniciar sesión</Link>
+            </Button>
+          </div>
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-muted-foreground">
+            {["Solo lectura", "Sin scraping", "+180 bancos", "Instalable (PWA)"].map(
+              (item) => (
+                <span key={item} className="inline-flex items-center gap-1.5">
+                  <Check className="size-4 text-emerald-500" />
+                  {item}
+                </span>
+              ),
+            )}
+          </div>
         </div>
       </section>
 
-      <section className="mx-auto w-full max-w-5xl px-6 pb-16">
+      <section className="mx-auto w-full max-w-5xl px-6 pb-20">
         <DashboardPreview />
       </section>
 
       <section className="border-y bg-card/60">
         <div className="mx-auto w-full max-w-5xl px-6 py-16">
           <div className="mx-auto max-w-3xl text-center">
-            <h2 className="text-2xl font-semibold">¿Qué es Kipu?</h2>
+            <h2 className="text-2xl font-semibold tracking-tight lg:text-3xl">
+              ¿Qué es Kipu?
+            </h2>
             <p className="mt-4 text-muted-foreground">
               Kipu es una aplicación de finanzas personales que convierte tus
               correos de bancos en un registro automático de tus gastos. En
@@ -191,102 +341,18 @@ export default async function WelcomePage() {
             </p>
           </div>
           <div className="mt-10 grid gap-4 sm:grid-cols-3">
-            <div className="rounded-xl border bg-card p-5 text-center">
-              <p className="text-2xl font-semibold text-primary">Automático</p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Sin registrar gastos a mano. Kipu lee tus notificaciones.
-              </p>
-            </div>
-            <div className="rounded-xl border bg-card p-5 text-center">
-              <p className="text-2xl font-semibold text-primary">Clasificado</p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Cada consumo va a su categoría y a tu tarjeta o cuenta.
-              </p>
-            </div>
-            <div className="rounded-xl border bg-card p-5 text-center">
-              <p className="text-2xl font-semibold text-primary">Visible</p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Dashboards mensuales y resúmenes en Telegram para decidir mejor.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="mx-auto w-full max-w-5xl px-6 pb-16">
-        <h2 className="mb-6 text-center text-2xl font-semibold">
-          ¿Cómo funciona?
-        </h2>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {STEPS.map((step) => (
-            <div
-              key={step.title}
-              className="flex flex-col gap-2 rounded-xl border bg-card p-5"
-            >
-              <step.icon className="size-5 text-primary" />
-              <h3 className="font-semibold">{step.title}</h3>
-              <p className="text-sm text-muted-foreground">{step.description}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="border-t bg-muted/30">
-        <div className="mx-auto w-full max-w-5xl px-6 py-16">
-          <h2 className="mb-6 text-center text-2xl font-semibold">
-            Qué puedes hacer con Kipu
-          </h2>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {FEATURES.map((feature) => (
-              <div
-                key={feature.title}
-                className="flex flex-col gap-2 rounded-xl border bg-card p-5"
-              >
-                <feature.icon className="size-5 text-primary" />
-                <h3 className="font-semibold">{feature.title}</h3>
-                <p className="text-sm text-muted-foreground">
-                  {feature.description}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="mx-auto w-full max-w-5xl px-6 py-16">
-        <h2 className="mb-2 text-center text-2xl font-semibold">
-          Bancos y billeteras compatibles
-        </h2>
-        <p className="mb-6 text-center text-sm text-muted-foreground">
-          Detección automática de notificaciones de más de 180 dominios bancarios
-          y de pagos.
-        </p>
-        <div className="flex flex-wrap justify-center gap-2">
-          {BANKS.map((bank) => (
-            <span
-              key={bank}
-              className="rounded-full border bg-card px-4 py-1.5 text-sm"
-            >
-              {bank}
-            </span>
-          ))}
-        </div>
-      </section>
-
-      <section className="border-t bg-muted/30">
-        <div className="mx-auto w-full max-w-5xl px-6 py-16">
-          <h2 className="mb-6 text-center text-2xl font-semibold">
-            Seguridad y privacidad
-          </h2>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {SECURITY.map((item) => (
+            {HIGHLIGHTS.map((item) => (
               <div
                 key={item.title}
-                className="flex flex-col gap-2 rounded-xl border bg-card p-5"
+                className="group rounded-xl border bg-card p-5 text-center transition-all duration-200 hover:-translate-y-1 hover:shadow-lg"
               >
-                <item.icon className="size-5 text-primary" />
-                <h3 className="font-semibold">{item.title}</h3>
-                <p className="text-sm text-muted-foreground">
+                <span className="mx-auto flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary transition-colors duration-200 group-hover:bg-primary group-hover:text-primary-foreground">
+                  <item.icon className="size-5" />
+                </span>
+                <p className="mt-4 text-lg font-semibold text-primary">
+                  {item.title}
+                </p>
+                <p className="mt-1 text-sm text-muted-foreground">
                   {item.description}
                 </p>
               </div>
@@ -295,19 +361,94 @@ export default async function WelcomePage() {
         </div>
       </section>
 
-      <section className="mx-auto flex w-full max-w-5xl flex-col items-center gap-4 px-6 pb-16 text-center">
-        <h2 className="text-2xl font-semibold">Empieza hoy</h2>
-        <p className="max-w-xl text-muted-foreground">
-          Crea tu cuenta, conecta tu Gmail y deja que Kipu organice tus gastos
-          automáticamente.
+      <section className="border-y bg-indigo-500/[0.04] dark:bg-indigo-400/[0.04]">
+        <div className="mx-auto w-full max-w-5xl px-6 py-20">
+          <SectionHeader
+            accent={ACCENTS.indigo}
+            title="¿Cómo funciona?"
+            subtitle="Cuatro pasos y tu dinero queda registrado solo."
+          />
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {STEPS.map((step, index) => (
+              <StepCard key={step.title} {...step} index={index + 1} accent={ACCENTS.indigo} />
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="border-y bg-muted/30">
+        <div className="mx-auto w-full max-w-5xl px-6 py-20">
+          <SectionHeader
+            accent={ACCENTS.amber}
+            title="Qué puedes hacer con Kipu"
+            subtitle="Lo esencial de tus finanzas, automatizado de punta a punta."
+          />
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {FEATURES.map((feature) => (
+              <FeatureCard key={feature.title} {...feature} accent={ACCENTS.amber} />
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="mx-auto w-full max-w-5xl px-6 py-20">
+        <h2 className="mb-2 text-center text-2xl font-semibold tracking-tight lg:text-3xl">
+          Bancos y billeteras compatibles
+        </h2>
+        <p className="mb-8 text-center text-sm text-muted-foreground">
+          Detección automática de notificaciones de más de 180 dominios
+          bancarios y de pagos.
         </p>
-        <div className="flex flex-wrap items-center justify-center gap-3">
-          <Button asChild size="lg" className="h-11 px-6">
-            <Link href="/login?mode=register">Crear cuenta gratis</Link>
-          </Button>
-          <Button asChild variant="outline" size="lg" className="h-11 px-6">
-            <Link href="/login">Iniciar sesión</Link>
-          </Button>
+        <div className="flex flex-wrap justify-center gap-2">
+          {BANKS.map((bank) => (
+            <span
+              key={bank}
+              className="rounded-full border bg-card px-4 py-1.5 text-sm transition-colors hover:border-primary/40 hover:bg-primary/5"
+            >
+              {bank}
+            </span>
+          ))}
+        </div>
+      </section>
+
+      <section className="border-y bg-muted/30">
+        <div className="mx-auto w-full max-w-5xl px-6 py-20">
+          <SectionHeader
+            accent={ACCENTS.emerald}
+            title="Seguridad y privacidad"
+            subtitle="Tus datos financieros son sensibles; los tratamos como tal."
+          />
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {SECURITY.map((item) => (
+              <FeatureCard key={item.title} {...item} accent={ACCENTS.emerald} />
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="mx-auto w-full max-w-5xl px-6 py-20">
+        <div className="relative overflow-hidden rounded-3xl border bg-card px-6 py-14 text-center shadow-xl">
+          <div
+            aria-hidden
+            className="pointer-events-none absolute -top-24 left-1/2 h-48 w-[36rem] -translate-x-1/2 rounded-full bg-primary/10 blur-3xl"
+          />
+          <div className="relative">
+            <h2 className="text-2xl font-semibold tracking-tight lg:text-3xl">
+              Empieza hoy
+            </h2>
+            <p className="mx-auto mt-4 max-w-xl text-muted-foreground">
+              Crea tu cuenta, conecta tu Gmail y deja que Kipu organice tus
+              gastos automáticamente.
+            </p>
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+              <Button asChild size="lg" className="h-11 px-6 shadow-lg shadow-primary/10">
+                <Link href="/login?mode=register">Crear cuenta gratis</Link>
+              </Button>
+              <Button asChild variant="outline" size="lg" className="h-11 px-6">
+                <Link href="/login">Iniciar sesión</Link>
+              </Button>
+            </div>
+          </div>
         </div>
       </section>
 

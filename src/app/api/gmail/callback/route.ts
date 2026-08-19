@@ -43,7 +43,7 @@ export async function GET(request: Request) {
       refreshTokenEncrypted,
     });
 
-    return Response.redirect(`${appUrl()}/settings?gmail=connected`);
+    return Response.redirect(`${appUrl()}/dashboard?gmail=connected`);
   } catch {
     return Response.redirect(`${appUrl()}/settings?gmail=error`);
   }

@@ -80,17 +80,25 @@ describe("formatTransactionNotification", () => {
 function sampleSummary(): MonthSummary {
   return {
     monthKey: "2026-08",
+    baseCurrency: "PEN",
     totalExpenses: 4280.5,
+    totalExpensesByCurrency: { PEN: 4280.5 },
+    totalIncome: 500,
+    totalIncomeByCurrency: { PEN: 500 },
+    netBalance: -3780.5,
     transactionCount: 12,
     creditExpenses: 2150.5,
+    creditExpensesByCurrency: { PEN: 2150.5 },
     debitExpenses: 2130,
+    debitExpensesByCurrency: { PEN: 2130 },
     cardPayments: 0,
+    cardPaymentsByCurrency: {},
     categoryBreakdown: [
-      { name: "Alimentación", icon: "Utensils", color: null, total: 1250 },
-      { name: "Transporte", icon: "Car", color: null, total: 430 },
+      { name: "Alimentación", icon: "Utensils", color: null, currency: "PEN", total: 1250 },
+      { name: "Transporte", icon: "Car", color: null, currency: "PEN", total: 430 },
     ],
     cardBreakdown: [
-      { name: "BCP Débito", bank: "BCP", last4: "8795", total: 1240.5 },
+      { name: "BCP Débito", bank: "BCP", last4: "8795", currency: "PEN", total: 1240.5 },
     ],
     latest: [],
   };

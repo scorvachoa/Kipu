@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Mail, User as UserIcon, Trash2, Send } from "lucide-react";
+import { AlertTriangle, Mail, User as UserIcon, Trash2, Send } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
 import { formatLastSync } from "@/lib/format";
 import type {
   GmailConnectionStatus,
@@ -20,6 +21,14 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 export function SettingsView({
   userEmail,
@@ -41,6 +50,10 @@ export function SettingsView({
   const [linking, setLinking] = useState(false);
   const [telegramError, setTelegramError] = useState<string | null>(null);
   const [disconnectingTelegram, setDisconnectingTelegram] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState("");
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   async function disconnectGmail() {
     setDisconnecting(true);
@@ -116,6 +129,22 @@ export function SettingsView({
 
   const lastSync = formatLastSync(gmail.last_sync_at);
   const botHandle = botUsername ? `@${botUsername}` : "el bot";
+  const requiredConfirm = userEmail ?? "ELIMINAR";
+
+  async function confirmDeleteAccount() {
+    setDeleting(true);
+    setDeleteError(null);
+    const res = await fetch("/api/account", { method: "DELETE" });
+    if (!res.ok) {
+      const body = (await res.json()) as { error?: string };
+      setDeleteError(body.error ?? "No se pudo eliminar la cuenta.");
+      setDeleting(false);
+      return;
+    }
+    const supabase = createClient();
+    await supabase.auth.signOut().catch(() => {});
+    router.replace("/");
+  }
 
   return (
     <div className="space-y-4">
@@ -322,6 +351,66 @@ export function SettingsView({
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           ) : null}
+        </CardContent>
+      </Card>
+
+      <Card className="border-destructive/30">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base text-destructive">
+            <AlertTriangle className="h-4 w-4" />
+            Zona de peligro
+          </CardTitle>
+          <CardDescription>
+            Eliminar tu cuenta borra todas tus transacciones, tarjetas,
+            categorías, personas y conexiones de forma permanente.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <Button
+            variant="destructive"
+            onClick={() => {
+              setDeleteConfirm("");
+              setDeleteError(null);
+              setDeleteOpen(true);
+            }}
+          >
+            <Trash2 className="h-4 w-4" />
+            Eliminar cuenta
+          </Button>
+          {deleteError ? (
+            <Alert variant="destructive">
+              <AlertDescription>{deleteError}</AlertDescription>
+            </Alert>
+          ) : null}
+          <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle className="text-destructive">
+                  ¿Eliminar tu cuenta?
+                </DialogTitle>
+                <DialogDescription>
+                  Esta acción es irreversible. Se borrarán todas tus
+                  transacciones, tarjetas, categorías, personas y conexiones.
+                  Escribe <span className="font-mono">{requiredConfirm}</span>{" "}
+                  para confirmar.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4">
+                <Input
+                  value={deleteConfirm}
+                  onChange={(e) => setDeleteConfirm(e.target.value)}
+                  placeholder={requiredConfirm}
+                />
+                <Button
+                  variant="destructive"
+                  disabled={deleteConfirm !== requiredConfirm || deleting}
+                  onClick={confirmDeleteAccount}
+                >
+                  {deleting ? "Eliminando…" : "Eliminar mi cuenta"}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
         </CardContent>
       </Card>
     </div>

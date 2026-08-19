@@ -5,6 +5,7 @@ import {
   isValidMonthKey,
   monthKeyToRange,
   monthLabel,
+  previousMonthKeys,
   type SummaryTx,
 } from "@/lib/finance/summary";
 
@@ -99,6 +100,73 @@ describe("aggregateMonthSummary", () => {
     const summary = aggregateMonthSummary(rows, "2026-08");
     expect(summary.latest).toHaveLength(10);
   });
+
+  it("desglosa los totales por moneda", () => {
+    const rows = [
+      tx({ amount: 100, currency: "PEN", payment_method: "debit_card" }),
+      tx({ amount: 50, currency: "USD", payment_method: "credit_card" }),
+      tx({ amount: 30, currency: "PEN", transaction_type: "payment" }),
+    ];
+    const summary = aggregateMonthSummary(rows, "2026-08");
+    expect(summary.baseCurrency).toBe("PEN");
+    expect(summary.totalExpenses).toBe(100);
+    expect(summary.totalExpensesByCurrency).toEqual({ PEN: 100, USD: 50 });
+    expect(summary.debitExpensesByCurrency).toEqual({ PEN: 100 });
+    expect(summary.creditExpensesByCurrency).toEqual({ USD: 50 });
+    expect(summary.cardPaymentsByCurrency).toEqual({ PEN: 30 });
+  });
+
+  it("elige como moneda base la más usada", () => {
+    const rows = [
+      tx({ amount: 10, currency: "PEN" }),
+      tx({ amount: 20, currency: "USD" }),
+      tx({ amount: 30, currency: "USD" }),
+    ];
+    const summary = aggregateMonthSummary(rows, "2026-08");
+    expect(summary.baseCurrency).toBe("USD");
+    expect(summary.totalExpensesByCurrency).toEqual({ PEN: 10, USD: 50 });
+    expect(summary.totalExpenses).toBe(50);
+  });
+
+  it("agrupa categorías y tarjetas por moneda", () => {
+    const rows = [
+      tx({
+        amount: 40,
+        currency: "PEN",
+        categories: { name: "Comida", icon: "🍔", color: null },
+        cards: { name: "BCP Visa", bank: "BCP", last4: "1234" },
+      }),
+      tx({
+        amount: 20,
+        currency: "USD",
+        categories: { name: "Comida", icon: "🍔", color: null },
+        cards: { name: "BCP Visa", bank: "BCP", last4: "1234" },
+      }),
+    ];
+    const summary = aggregateMonthSummary(rows, "2026-08");
+    expect(summary.categoryBreakdown.map((c) => [c.name, c.currency, c.total])).toEqual([
+      ["Comida", "PEN", 40],
+      ["Comida", "USD", 20],
+    ]);
+    expect(summary.cardBreakdown.map((c) => [c.name, c.currency, c.total])).toEqual([
+      ["BCP Visa", "PEN", 40],
+      ["BCP Visa", "USD", 20],
+    ]);
+  });
+
+  it("suma ingresos y reembolsos por separado de los gastos", () => {
+    const rows = [
+      tx({ amount: 100, transaction_type: "purchase" }),
+      tx({ amount: 200, transaction_type: "income" }),
+      tx({ amount: 50, transaction_type: "refund", currency: "USD" }),
+    ];
+    const summary = aggregateMonthSummary(rows, "2026-08");
+    expect(summary.totalExpenses).toBe(100);
+    expect(summary.transactionCount).toBe(1);
+    expect(summary.totalIncome).toBe(200);
+    expect(summary.totalIncomeByCurrency).toEqual({ PEN: 200, USD: 50 });
+    expect(summary.netBalance).toBe(100);
+  });
 });
 
 describe("monthKeyToRange", () => {
@@ -122,5 +190,19 @@ describe("helpers de mes", () => {
 
   it("formatea la etiqueta del mes", () => {
     expect(monthLabel("2026-08")).toMatch(/agosto/i);
+  });
+
+  it("calcula los meses anteriores a una clave", () => {
+    expect(previousMonthKeys("2026-08", 3)).toEqual([
+      "2026-08",
+      "2026-07",
+      "2026-06",
+    ]);
+    expect(previousMonthKeys("2026-01", 2)).toEqual(["2026-01", "2025-12"]);
+    expect(previousMonthKeys("2026-08")).toHaveLength(6);
+  });
+
+  it("rechaza claves de mes inválidas en previousMonthKeys", () => {
+    expect(() => previousMonthKeys("abc-def", 2)).toThrow();
   });
 });

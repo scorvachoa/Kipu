@@ -1,4 +1,16 @@
-export const BANK_NAMES = ["BCP", "INTERBANK", "BCP IO"] as const;
+export const BANK_NAMES = [
+  "BCP",
+  "INTERBANK",
+  "BCP IO",
+  "BBVA",
+  "SCOTIABANK",
+  "MIBANCO",
+  "BANBIF",
+  "BANCO DE LA NACION",
+  "CAJA",
+  "FINANCIERA",
+  "OTRO",
+] as const;
 export type BankingBank = string;
 
 export const CARD_TYPES = ["credit", "debit"] as const;

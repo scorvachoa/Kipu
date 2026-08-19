@@ -33,7 +33,22 @@ export class GmailNotConnectedError extends Error {
   }
 }
 
-function computeSince(connection: GmailConnection, range?: SyncRange): Date {
+export interface SyncOptions {
+  /** Solo emails nuevos desde la última sincronización; sin escaneo inicial. */
+  fromLastSync?: boolean;
+}
+
+function computeSince(
+  connection: GmailConnection,
+  range?: SyncRange,
+  opts: SyncOptions = {},
+): Date | null {
+  if (opts.fromLastSync) {
+    if (!connection.last_sync_at) {
+      return null;
+    }
+    return new Date(new Date(connection.last_sync_at).getTime() - DAY_MS);
+  }
   if (range) {
     return new Date(Date.now() - rangeToDays(range) * DAY_MS);
   }
@@ -46,6 +61,7 @@ function computeSince(connection: GmailConnection, range?: SyncRange): Date {
 export async function syncUserGmail(
   userId: string,
   range?: SyncRange,
+  opts: SyncOptions = {},
 ): Promise<SyncOutcome> {
   const connection = await getGmailConnection(userId);
   if (!connection || connection.revoked_at) {
@@ -65,7 +81,21 @@ export async function syncUserGmail(
 
   const since = resume
     ? new Date(connection.sync_since!)
-    : computeSince(connection, range);
+    : computeSince(connection, range, opts);
+
+  if (since === null) {
+    return {
+      emailsFound: 0,
+      emailsProcessed: 0,
+      transactionsCreated: 0,
+      duplicatesFound: 0,
+      requiresReview: 0,
+      errors: 0,
+      hasMore: false,
+      createdTransactions: [],
+    };
+  }
+
   const rangeKey = resume
     ? (connection.sync_range ?? range ?? "incremental")
     : range ?? "incremental";

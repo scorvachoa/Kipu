@@ -3,7 +3,10 @@
 import {
   ArrowDownLeft,
   ArrowUpRight,
+  Check,
   CreditCard,
+  RefreshCw,
+  Send,
   Wallet,
 } from "lucide-react";
 import {
@@ -111,148 +114,213 @@ const RECENT = [
 
 export function DashboardPreview() {
   return (
-    <div className="rounded-2xl border bg-card p-4 shadow-xl sm:p-6">
-      <div className="mb-5 flex items-center justify-between">
-        <div>
-          <p className="text-lg font-semibold capitalize">Agosto de 2026</p>
-          <p className="text-sm text-muted-foreground">Resumen de tus gastos</p>
+    <div className="relative mx-auto max-w-5xl">
+      {/* glow detrás del mockup */}
+      <div aria-hidden className="pointer-events-none absolute inset-x-8 -top-8 h-40 rounded-full bg-primary/10 blur-3xl" />
+      <div aria-hidden className="pointer-events-none absolute inset-x-20 -bottom-10 h-40 rounded-full bg-indigo-500/10 blur-3xl" />
+
+      <div className="relative rounded-2xl border bg-card shadow-2xl">
+        {/* barra de ventana */}
+        <div className="flex items-center gap-2 border-b px-4 py-3">
+          <span className="size-2.5 rounded-full bg-red-400" />
+          <span className="size-2.5 rounded-full bg-amber-400" />
+          <span className="size-2.5 rounded-full bg-emerald-400" />
+          <span className="ml-3 hidden items-center gap-1.5 rounded-md bg-muted px-2.5 py-1 text-xs text-muted-foreground sm:flex">
+            kipu.app · dashboard
+          </span>
+          <span className="ml-auto inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium text-muted-foreground">
+            <span className="relative flex size-2">
+              <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex size-2 rounded-full bg-emerald-500" />
+            </span>
+            <RefreshCw className="size-3" />
+            Synced
+          </span>
         </div>
-        <span className="rounded-md border px-3 py-2 text-sm text-muted-foreground">
-          Sincronizar con Gmail
-        </span>
-      </div>
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {SUMMARY_CARDS.map((card) => (
-          <div key={card.title} className="rounded-xl border bg-card p-4">
-            <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0">
-                <p className="truncate text-xs text-muted-foreground">
-                  {card.title}
-                </p>
-                <p className="mt-1 truncate text-sm font-semibold sm:text-lg">
-                  {card.value}
-                </p>
-                {card.hint ? (
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {card.hint}
-                  </p>
-                ) : null}
-              </div>
-              <span
-                className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${card.iconBg} ${card.iconText}`}
-              >
-                <card.icon className="h-4 w-4" />
-              </span>
+        <div className="p-4 sm:p-6">
+          <div className="mb-5 flex items-center justify-between">
+            <div>
+              <p className="text-lg font-semibold capitalize">Agosto de 2026</p>
+              <p className="text-sm text-muted-foreground">
+                Resumen de tus gastos
+              </p>
             </div>
+            <span className="hidden items-center gap-1.5 rounded-md border px-3 py-2 text-sm text-muted-foreground sm:flex">
+              <RefreshCw className="size-3.5" />
+              Sincronizar con Gmail
+            </span>
           </div>
-        ))}
-      </div>
 
-      <div className="mt-4 grid gap-4 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">Por categoría</CardTitle>
-            <CardDescription>Distribución de gastos</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-col items-center gap-4 sm:flex-row">
-              <div className="h-36 w-36 shrink-0">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={CHART_DATA}
-                      dataKey="value"
-                      nameKey="name"
-                      innerRadius={40}
-                      outerRadius={65}
-                      paddingAngle={2}
-                      strokeWidth={0}
-                    >
-                      {CHART_DATA.map((entry) => (
-                        <Cell key={entry.name} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(value) => formatMoney(Number(value))} />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-              <ul className="w-full space-y-1.5 text-sm">
-                {CHART_DATA.map((c) => (
-                  <li key={c.name} className="flex items-center justify-between gap-2">
-                    <span className="flex min-w-0 items-center gap-2">
-                      <span
-                        className="h-2.5 w-2.5 shrink-0 rounded-full"
-                        style={{ background: c.color }}
-                      />
-                      <span className="truncate">
-                        <CategoryIcon name={c.icon} className="mr-1 inline h-3 w-3" />
-                        {c.name}
-                      </span>
-                    </span>
-                    <span className="shrink-0 text-muted-foreground">
-                      {formatMoney(c.value)}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">Por tarjeta</CardTitle>
-            <CardDescription>Gastos según tarjeta usada</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ul className="space-y-2.5 text-sm">
-              {CARDS.map((c) => (
-                <li key={c.name} className="flex items-center justify-between gap-2">
-                  <span className="truncate">{c.name}</span>
-                  <span className="shrink-0 text-muted-foreground">
-                    {formatMoney(c.total)}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="mt-4">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">Movimientos recientes</CardTitle>
-            <CardDescription>Últimas transacciones del mes</CardDescription>
-          </CardHeader>
-          <CardContent className="p-0">
-            <ul className="divide-y">
-              {RECENT.map((t) => (
-                <li key={t.merchant} className="flex items-center justify-between gap-3 px-4 py-2.5">
-                  <div className="flex min-w-0 items-center gap-3">
-                    <span
-                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
-                      style={{ backgroundColor: t.color, color: "#fff" }}
-                    >
-                      <CategoryIcon name={t.icon} className="h-4 w-4" />
-                    </span>
-                    <div className="min-w-0">
-                      <p className="truncate text-sm">{t.merchant}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {t.category} · {t.card}
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {SUMMARY_CARDS.map((card) => (
+              <div key={card.title} className="rounded-xl border bg-card p-4">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="truncate text-xs text-muted-foreground">
+                      {card.title}
+                    </p>
+                    <p className="mt-1 truncate text-sm font-semibold sm:text-lg">
+                      {card.value}
+                    </p>
+                    {card.hint ? (
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {card.hint}
                       </p>
-                    </div>
+                    ) : null}
                   </div>
-                  <div className="shrink-0 text-right">
-                    <p className="text-sm font-medium">{formatMoney(t.amount)}</p>
-                    <p className="text-xs text-muted-foreground">{t.date}</p>
+                  <span
+                    className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${card.iconBg} ${card.iconText}`}
+                  >
+                    <card.icon className="h-4 w-4" />
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-4 grid gap-4 md:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm">Por categoría</CardTitle>
+                <CardDescription>Distribución de gastos</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-col items-center gap-4 sm:flex-row">
+                  <div className="h-36 w-36 shrink-0">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={CHART_DATA}
+                          dataKey="value"
+                          nameKey="name"
+                          innerRadius={40}
+                          outerRadius={65}
+                          paddingAngle={2}
+                          strokeWidth={0}
+                        >
+                          {CHART_DATA.map((entry) => (
+                            <Cell key={entry.name} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <Tooltip
+                          formatter={(value) => formatMoney(Number(value))}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
                   </div>
-                </li>
-              ))}
-            </ul>
-          </CardContent>
-        </Card>
+                  <ul className="w-full space-y-1.5 text-sm">
+                    {CHART_DATA.map((c) => (
+                      <li
+                        key={c.name}
+                        className="flex items-center justify-between gap-2"
+                      >
+                        <span className="flex min-w-0 items-center gap-2">
+                          <span
+                            className="h-2.5 w-2.5 shrink-0 rounded-full"
+                            style={{ background: c.color }}
+                          />
+                          <span className="truncate">
+                            <CategoryIcon
+                              name={c.icon}
+                              className="mr-1 inline h-3 w-3"
+                            />
+                            {c.name}
+                          </span>
+                        </span>
+                        <span className="shrink-0 text-muted-foreground">
+                          {formatMoney(c.value)}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm">Por tarjeta</CardTitle>
+                <CardDescription>Gastos según tarjeta usada</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-2.5 text-sm">
+                  {CARDS.map((c) => (
+                    <li
+                      key={c.name}
+                      className="flex items-center justify-between gap-2"
+                    >
+                      <span className="truncate">{c.name}</span>
+                      <span className="shrink-0 text-muted-foreground">
+                        {formatMoney(c.total)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="mt-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm">
+                  Movimientos recientes
+                </CardTitle>
+                <CardDescription>
+                  Últimas transacciones del mes
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="p-0">
+                <ul className="divide-y">
+                  {RECENT.map((t) => (
+                    <li
+                      key={t.merchant}
+                      className="flex items-center justify-between gap-3 px-4 py-2.5"
+                    >
+                      <div className="flex min-w-0 items-center gap-3">
+                        <span
+                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
+                          style={{ backgroundColor: t.color, color: "#fff" }}
+                        >
+                          <CategoryIcon name={t.icon} className="h-4 w-4" />
+                        </span>
+                        <div className="min-w-0">
+                          <p className="truncate text-sm">{t.merchant}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {t.category} · {t.card}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="shrink-0 text-right">
+                        <p className="text-sm font-medium">
+                          {formatMoney(t.amount)}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {t.date}
+                        </p>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        {/* toast de Telegram pegado al costado derecho del mockup */}
+        <div className="pointer-events-none absolute -right-5 top-12 hidden w-60 items-start gap-2.5 rounded-xl border bg-card/95 p-3 shadow-xl backdrop-blur lg:flex">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-sky-500/15 text-sky-600 dark:text-sky-400">
+            <Send className="size-4" />
+          </span>
+          <div className="min-w-0">
+            <p className="text-xs font-semibold">Kipu Bot · Telegram</p>
+            <p className="text-xs leading-snug text-muted-foreground">
+              Nuevo gasto detectado: <b>Plaza Vea</b> · S/ 124.50
+            </p>
+          </div>
+          <Check className="mt-0.5 size-3.5 shrink-0 text-emerald-500" />
+        </div>
       </div>
     </div>
   );

@@ -180,6 +180,7 @@ export interface Database {
           name: string;
           icon: string | null;
           color: string | null;
+          monthly_budget: number | null;
           parent_id: string | null;
           active: boolean;
           created_at: string;
@@ -191,6 +192,7 @@ export interface Database {
           name: string;
           icon?: string | null;
           color?: string | null;
+          monthly_budget?: number | null;
           parent_id?: string | null;
           active?: boolean;
           created_at?: string;

@@ -1,5 +1,6 @@
 import type { MonthSummary } from "@/lib/finance/summary";
 import { monthLabel } from "@/lib/finance/summary";
+import { DEFAULT_CURRENCY } from "@/types/shared";
 import { generateJSON } from "./generate-json";
 import { hasAiProvider } from "./providers";
 
@@ -7,12 +8,25 @@ interface MonthResumenResult {
   resumen: string;
 }
 
-function money(value: number): string {
+function isoCurrency(currency: string): string {
+  return { PEN: "PEN", USD: "USD", EUR: "EUR" }[currency] ?? DEFAULT_CURRENCY;
+}
+
+function money(value: number, currency: string = DEFAULT_CURRENCY): string {
   return value.toLocaleString("es-PE", {
     style: "currency",
-    currency: "PEN",
+    currency: isoCurrency(currency),
     minimumFractionDigits: 2,
   });
+}
+
+function totalsText(totals: Record<string, number>): string {
+  const entries = Object.entries(totals).filter(([, amount]) => amount !== 0);
+  if (entries.length === 0) {
+    return money(0);
+  }
+  entries.sort((a, b) => b[1] - a[1]);
+  return entries.map(([currency, amount]) => money(amount, currency)).join(" + ");
 }
 
 /**
@@ -29,12 +43,12 @@ export async function resumenMensualConGemini(
 
   const topCategories = summary.categoryBreakdown
     .slice(0, 4)
-    .map((c) => `${c.name}: ${money(c.total)}`)
+    .map((c) => `${c.name}: ${money(c.total, c.currency)}`)
     .join("; ");
 
   const topCards = summary.cardBreakdown
     .slice(0, 3)
-    .map((c) => `${c.name}: ${money(c.total)}`)
+    .map((c) => `${c.name}: ${money(c.total, c.currency)}`)
     .join("; ");
 
   const latestMerchants = summary.latest
@@ -46,9 +60,10 @@ export async function resumenMensualConGemini(
   const prompt = [
     `Eres el asistente financiero de Kipu. Resumen del usuario para ${monthLabel(summary.monthKey)}:`,
     "",
-    `Gastos totales: ${money(summary.totalExpenses)} (${summary.transactionCount} movimientos).`,
-    `Crédito: ${money(summary.creditExpenses)}. Débito: ${money(summary.debitExpenses)}.`,
-    `Pago de tarjetas: ${money(summary.cardPayments)}.`,
+    `Gastos totales: ${totalsText(summary.totalExpensesByCurrency)} (${summary.transactionCount} movimientos).`,
+    `Ingresos: ${totalsText(summary.totalIncomeByCurrency)}. Saldo neto: ${money(summary.netBalance, summary.baseCurrency)}.`,
+    `Crédito: ${totalsText(summary.creditExpensesByCurrency)}. Débito: ${totalsText(summary.debitExpensesByCurrency)}.`,
+    `Pago de tarjetas: ${totalsText(summary.cardPaymentsByCurrency)}.`,
     `Top categorías: ${topCategories || "sin datos"}.`,
     `Top tarjetas: ${topCards || "sin datos"}.`,
     latestMerchants ? `Comercios frecuentes: ${latestMerchants}.` : "",

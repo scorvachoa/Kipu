@@ -1,8 +1,8 @@
 import { z } from "zod";
-import { BANK_NAMES, CARD_TYPES, CURRENCIES } from "@/types/shared";
+import { CARD_TYPES, CURRENCIES } from "@/types/shared";
 
 export const createCardSchema = z.object({
-  bank: z.enum(BANK_NAMES),
+  bank: z.string().trim().min(1).max(50),
   name: z.string().trim().min(1).max(80),
   card_type: z.enum(CARD_TYPES),
   last4: z.string().regex(/^\d{4}$/),

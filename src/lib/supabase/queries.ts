@@ -14,6 +14,10 @@ export interface TransactionFilters {
   search?: string;
 }
 
+export interface ListTransactionsOptions {
+  limit?: number;
+}
+
 export interface CardWithOwner {
   id: string;
   user_id: string;
@@ -46,6 +50,7 @@ export interface Category {
   name: string;
   icon: string | null;
   color: string | null;
+  monthly_budget: number | null;
   parent_id: string | null;
   active: boolean;
   created_at: string;
@@ -124,6 +129,7 @@ export async function listTransactions(
   supabase: SupabaseClient<Database>,
   userId: string,
   filters: TransactionFilters = {},
+  options: ListTransactionsOptions = {},
 ): Promise<SummaryTx[]> {
   let query = supabase
     .from("transactions")
@@ -135,7 +141,7 @@ export async function listTransactions(
     .eq("user_id", userId)
     .order("transaction_date", { ascending: false })
     .order("transaction_time", { ascending: false })
-    .limit(300);
+    .limit(options.limit ?? 300);
 
   if (filters.monthKey) {
     const { gte, lt } = monthKeyToRange(filters.monthKey);
@@ -211,6 +217,50 @@ export async function listPeople(
     throw error;
   }
   return (data ?? []) as Person[];
+}
+
+export interface CategorySpend {
+  category_id: string;
+  currency: string;
+  total: number;
+}
+
+export async function getCategorySpending(
+  supabase: SupabaseClient<Database>,
+  userId: string,
+  monthKey: string,
+): Promise<CategorySpend[]> {
+  const { gte, lt } = monthKeyToRange(monthKey);
+  const { data, error } = await supabase
+    .from("transactions")
+    .select("category_id, currency, amount, transaction_type")
+    .eq("user_id", userId)
+    .eq("transaction_type", "purchase")
+    .not("category_id", "is", null)
+    .gte("transaction_date", gte)
+    .lt("transaction_date", lt);
+  if (error) {
+    throw error;
+  }
+  const byCategory = new Map<string, Map<string, number>>();
+  for (const row of data ?? []) {
+    if (!row.category_id || row.currency == null) continue;
+    const perCurrency = byCategory.get(row.category_id) ?? new Map<string, number>();
+    const currency = row.currency || "PEN";
+    perCurrency.set(currency, (perCurrency.get(currency) ?? 0) + Number(row.amount));
+    byCategory.set(row.category_id, perCurrency);
+  }
+  const result: CategorySpend[] = [];
+  for (const [categoryId, perCurrency] of byCategory) {
+    for (const [currency, total] of perCurrency) {
+      result.push({
+        category_id: categoryId,
+        currency,
+        total: Math.round(total * 100) / 100,
+      });
+    }
+  }
+  return result;
 }
 
 export async function getGmailConnection(
