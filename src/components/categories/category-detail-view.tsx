@@ -62,12 +62,6 @@ export function CategoryDetailView({
   const color = category.color ?? undefined;
   const primary = pickPrimaryCurrency(spendByCurrency);
   const spent = spendByCurrency[primary] ?? 0;
-  const budget = category.monthly_budget;
-  const comparable = budget !== null && budget >= 0 && primary === DEFAULT_CURRENCY;
-  const percent = comparable
-    ? Math.min(100, Math.round((spent / budget!) * 100))
-    : 0;
-  const overBudget = comparable && spent > budget!;
 
   return (
     <div className="space-y-4">
@@ -131,26 +125,6 @@ export function CategoryDetailView({
               </p>
             )
             : null}
-          {budget !== null ? (
-            <div className="mt-3">
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-muted-foreground">Presupuesto mensual</span>
-                <span className={overBudget ? "font-medium text-red-600" : "text-muted-foreground"}>
-                  {formatMoney(budget, DEFAULT_CURRENCY)}
-                </span>
-              </div>
-              {comparable && budget > 0 ? (
-                <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-muted">
-                  <div
-                    className={`h-full rounded-full transition-all ${
-                      overBudget ? "bg-red-500" : "bg-emerald-500"
-                    }`}
-                    style={{ width: `${percent}%` }}
-                  />
-                </div>
-              ) : null}
-            </div>
-          ) : null}
         </CardContent>
       </Card>
 

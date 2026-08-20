@@ -14,6 +14,7 @@ Control de finanzas personales. Kipu sincroniza tus movimientos bancarios (BCP e
 - **Gráfico de tendencia**: gasto de los últimos 6 meses.
 - **Presupuestos por categoría con barra de progreso** desde Ajustes → Categorías; el límite es mensual y opcional.
 - **Categorías editables con color e icono** (iconos Lucide) desde Ajustes → Categorías.
+- **Categorías globales y fijas** (sin crear/editar): un conjunto único para todos los usuarios; cada categoría tiene su página de detalle con los consumos del mes y selector de meses.
 - Gestión de tarjetas, cuentas, personas y reglas de comercios → categorías.
 - **Exportar movimientos a CSV** (con los filtros aplicados) desde la página de Transacciones.
 - **Tema claro/oscuro** con persistencia y sin parpadeo al cargar (toggle en toda la app).
@@ -89,6 +90,7 @@ Aplica las migraciones en orden desde el **SQL Editor** o con la CLI:
 6. `006_gmail_sync_cursor.sql` — cursor de Gmail para sincronización incremental por lotes.
 7. `007_restrict_sensitive_table_rls.sql` — bloqueo de acceso anónimo a Gmail/Telegram (service role solamente).
 8. `008_category_budget.sql` — columna `monthly_budget` en `categories` (presupuesto mensual).
+9. `009_global_categories.sql` — categorías globales (`user_id` nulo), siembra del conjunto fijo, migración de datos y bloqueo de escritura por usuarios.
 
 ## Scripts
 

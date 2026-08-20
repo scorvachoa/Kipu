@@ -46,7 +46,8 @@ export function createTransactionRepository(
       const { data, error } = await client
         .from("categories")
         .select("*")
-        .eq("user_id", userId);
+        .eq("active", true)
+        .or(`user_id.eq.${userId},user_id.is.null`);
       if (error) {
         throw error;
       }

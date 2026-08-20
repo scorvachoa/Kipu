@@ -46,11 +46,10 @@ export interface Person {
 
 export interface Category {
   id: string;
-  user_id: string;
+  user_id: string | null;
   name: string;
   icon: string | null;
   color: string | null;
-  monthly_budget: number | null;
   parent_id: string | null;
   active: boolean;
   created_at: string;
@@ -192,11 +191,14 @@ export async function listCategories(
   supabase: SupabaseClient<Database>,
   userId: string,
 ): Promise<Category[]> {
+  if (!userId) {
+    return [];
+  }
   const { data, error } = await supabase
     .from("categories")
     .select("*")
-    .eq("user_id", userId)
     .eq("active", true)
+    .or(`user_id.eq.${userId},user_id.is.null`)
     .order("name", { ascending: true });
   if (error) {
     throw error;

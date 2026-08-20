@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { EmailEnvelope } from "@/lib/email/bank-email-parser";
 import { bcpParser } from "@/lib/email/parsers/bcp";
 import {
   bcpConsumoEmail,
@@ -59,5 +60,35 @@ describe("bcpParser", () => {
       html: "<html><body><p>Formato desconocido</p></body></html>",
     };
     expect(bcpParser.parse(email)).toEqual([]);
+  });
+
+  it("usa el asunto como fallback del comercio", () => {
+    const email: EmailEnvelope = {
+      ...bcpConsumoEmail,
+      subject: "Consumo por S/ 50.00 en NETFLIX.COM",
+      html: `<html><body><p>Realizaste un consumo de S/ 50.00.</p>
+        <table>
+        <tr><td>Total del consumo</td><td>S/ 50.00</td></tr>
+        <tr><td>Fecha y hora</td><td>07 de agosto de 2026 - 07:38 PM</td></tr>
+        <tr><td>Número de Tarjeta de Débito</td><td>************8795</td></tr>
+        </table></body></html>`,
+    };
+    const [parsed] = bcpParser.parse(email);
+    expect(parsed.merchant).toBe("NETFLIX.COM");
+  });
+
+  it("extrae la tarjeta de una máscara dentro de un fragmento con texto", () => {
+    const email: EmailEnvelope = {
+      ...bcpConsumoEmail,
+      html: `<html><body><p>Consumo OK</p>
+        <table>
+        <tr><td>Total del consumo</td><td>S/ 11.08</td></tr>
+        <tr><td>Fecha y hora</td><td>07 de agosto de 2026 - 07:38 PM</td></tr>
+        <tr><td>Detalle de Tarjeta</td><td>Tu Tarjeta de Débito ************8795 terminó</td></tr>
+        <tr><td>Empresa</td><td>OP *Market Mary</td></tr>
+        </table></body></html>`,
+    };
+    const [parsed] = bcpParser.parse(email);
+    expect(parsed.cardLast4).toBe("8795");
   });
 });

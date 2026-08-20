@@ -3,6 +3,7 @@ import type { EmailEnvelope } from "@/lib/email/bank-email-parser";
 import { bcpParser } from "@/lib/email/parsers/bcp";
 import { interbankParser } from "@/lib/email/parsers/interbank";
 import {
+  enrichMissingFields,
   identifyInstrument,
   isDuplicate,
   resolveTransaction,
@@ -202,6 +203,34 @@ describe("identifyInstrument", () => {
       people: [],
     });
     expect(instrument.accountId).toBe("acc-3902");
+    expect(instrument.cardId).toBeNull();
+  });
+
+  it("asigna por últimos 4 aunque el banco difiera, si hay una única tarjeta", () => {
+    const parsed = {
+      ...firstParsedOf(bcpConsumoEmail),
+      bank: "OTRO",
+    };
+    const instrument = identifyInstrument(
+      parsed,
+      makeResources([makeCard({})]),
+    );
+    expect(instrument.cardId).toBe("card-1");
+    expect(instrument.personId).toBe("person-yo");
+  });
+
+  it("no asigna por últimos 4 cuando hay varias tarjetas con el mismo last4", () => {
+    const parsed = {
+      ...firstParsedOf(bcpConsumoEmail),
+      bank: "OTRO",
+    };
+    const instrument = identifyInstrument(
+      parsed,
+      makeResources([
+        makeCard({ bank: "BCP" }),
+        makeCard({ id: "card-2", bank: "INTERBANK" }),
+      ]),
+    );
     expect(instrument.cardId).toBeNull();
   });
 });
@@ -433,6 +462,54 @@ it("auto-crea la cuenta cuando la transacción trae accountLast4", async () => {
     expect(repo.accounts).toHaveLength(1);
     expect(repo.accounts[0].name).toBe("Cuenta INTERBANK ****1732");
     expect(resolved.accountId).toBe(repo.accounts[0].id);
+  });
+});
+
+describe("enrichMissingFields", () => {
+  const base = {
+    bank: "BCP",
+    transactionType: "purchase" as const,
+    paymentMethod: "debit_card" as const,
+    amount: 11.08,
+    currency: "PEN" as const,
+    transactionDate: "2026-08-07",
+    cardLast4: "8795",
+  };
+
+  it("rellena el comercio cuando falta y coincide el monto", () => {
+    const parsed: ParsedTransaction = { ...base, merchant: undefined };
+    const ai: ParsedTransaction = {
+      ...base,
+      merchant: "OP *Market Mary",
+    };
+    const enriched = enrichMissingFields(parsed, ai);
+    expect(enriched.merchant).toBe("OP *Market Mary");
+    expect(enriched.cardLast4).toBe("8795");
+  });
+
+  it("rellena la tarjeta cuando falta y el banco difiere", () => {
+    const parsed: ParsedTransaction = {
+      ...base,
+      bank: "OTRO",
+      cardLast4: undefined,
+    };
+    const ai: ParsedTransaction = { ...base, cardLast4: "8795" };
+    const enriched = enrichMissingFields(parsed, ai);
+    expect(enriched.cardLast4).toBe("8795");
+  });
+
+  it("no rellena campos de una transacción distinta", () => {
+    const parsed: ParsedTransaction = { ...base, merchant: undefined };
+    const ai: ParsedTransaction = { ...base, amount: 99.99, merchant: "OTRO" };
+    const enriched = enrichMissingFields(parsed, ai);
+    expect(enriched.merchant).toBeUndefined();
+  });
+
+  it("mantiene los campos ya presentes", () => {
+    const parsed: ParsedTransaction = { ...base, merchant: "Real" };
+    const ai: ParsedTransaction = { ...base, merchant: "Inventado" };
+    const enriched = enrichMissingFields(parsed, ai);
+    expect(enriched.merchant).toBe("Real");
   });
 });
 

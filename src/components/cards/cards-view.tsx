@@ -31,22 +31,22 @@ const TYPE_LABELS: Record<string, string> = {
   debit: "Débito",
 };
 
-const BANK_BORDERS: Record<string, string> = {
-  BCP: "border-indigo-500",
-  INTERBANK: "border-emerald-500",
-  "BCP IO": "border-slate-500",
-  BBVA: "border-blue-500",
-  SCOTIABANK: "border-rose-500",
-  MIBANCO: "border-violet-500",
-  BANBIF: "border-cyan-500",
-  "BANCO DE LA NACION": "border-amber-500",
-  CAJA: "border-orange-500",
-  FINANCIERA: "border-fuchsia-500",
-  OTRO: "border-slate-400",
+const BANK_BG: Record<string, string> = {
+  BCP: "bg-indigo-500",
+  INTERBANK: "bg-emerald-500",
+  "BCP IO": "bg-slate-500",
+  BBVA: "bg-blue-500",
+  SCOTIABANK: "bg-rose-500",
+  MIBANCO: "bg-violet-500",
+  BANBIF: "bg-cyan-500",
+  "BANCO DE LA NACION": "bg-amber-500",
+  CAJA: "bg-orange-500",
+  FINANCIERA: "bg-fuchsia-500",
+  OTRO: "bg-slate-400",
 };
 
-function bankBorder(bank: string): string {
-  return BANK_BORDERS[bank.toUpperCase()] ?? BANK_BORDERS.OTRO;
+function bankBg(bank: string): string {
+  return BANK_BG[bank.toUpperCase()] ?? BANK_BG.OTRO;
 }
 
 interface CardForm {
@@ -344,61 +344,62 @@ export function CardsView({
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           {cards.map((card) => (
             <div
               key={card.id}
-              className={`flex flex-col overflow-hidden rounded-2xl border-2 bg-card p-5 ${bankBorder(card.bank)} ${card.active ? "" : "opacity-70"}`}
+              className={`group flex flex-col gap-2 rounded-2xl border bg-card p-4 transition-colors hover:bg-muted/40 ${
+                card.active ? "" : "opacity-70"
+              }`}
             >
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <p className="text-xs font-medium tracking-widest text-muted-foreground uppercase">
-                    {card.bank}
-                  </p>
-                  <p className="mt-0.5 text-base font-semibold">
-                    {card.name}
-                  </p>
-                </div>
-                <div className="flex flex-col items-end gap-1.5">
-                  <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium">
-                    {TYPE_LABELS[card.card_type] ?? card.card_type}
-                  </span>
-                  <span className="rounded-full bg-secondary px-2 py-0.5 text-[11px] text-muted-foreground">
-                    {card.active ? "Activa" : "Inactiva"}
-                  </span>
-                </div>
-              </div>
-              <div className="mt-5 font-mono text-sm tracking-[0.25em] text-muted-foreground">
-                •••• •••• •••• {card.last4}
-              </div>
-              <div className="mt-4 flex items-center justify-between text-sm">
-                <span>{card.people?.name ?? "Sin dueño"}</span>
-                <span className="text-xs text-muted-foreground">
-                  {card.currency ?? "PEN"}
+              <p className="flex items-center gap-2 text-base font-semibold">
+                <span
+                  className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-white ${bankBg(
+                    card.bank,
+                  )}`}
+                >
+                  <CreditCard className="h-4 w-4" />
                 </span>
-              </div>
-              <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-border pt-3">
-                {card.closing_day || card.payment_day ? (
-                  <p className="text-xs text-muted-foreground">
-                    {card.closing_day ? `Cierre día ${card.closing_day}` : ""}
-                    {card.closing_day && card.payment_day ? " · " : ""}
-                    {card.payment_day ? `Pago día ${card.payment_day}` : ""}
-                  </p>
-                ) : (
-                  <span className="text-xs text-muted-foreground">
-                    {card.card_type === "debit"
-                      ? "Tarjeta de débito"
-                      : "Crédito"}
-                  </span>
-                )}
-                <div className="flex items-center gap-2">
-                  <Button variant="ghost" size="sm" onClick={() => openEdit(card)}>
-                    <Pencil className="h-3.5 w-3.5" />
+                <span className="line-clamp-1">{card.name}</span>
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {card.bank} · {TYPE_LABELS[card.card_type] ?? card.card_type} ·
+                •••• {card.last4}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {card.people?.name ?? "Sin dueño"} · {card.currency ?? "PEN"}
+              </p>
+              {card.closing_day || card.payment_day ? (
+                <p className="text-xs text-muted-foreground">
+                  {card.closing_day ? `Cierre día ${card.closing_day}` : ""}
+                  {card.closing_day && card.payment_day ? " · " : ""}
+                  {card.payment_day ? `Pago día ${card.payment_day}` : ""}
+                </p>
+              ) : null}
+              <div className="mt-1 flex flex-wrap items-center justify-between gap-2 border-t border-border pt-3">
+                <span
+                  className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${
+                    card.active
+                      ? "bg-secondary text-muted-foreground"
+                      : "bg-muted text-muted-foreground"
+                  }`}
+                >
+                  {card.active ? "Activa" : "Inactiva"}
+                </span>
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2 text-xs"
+                    onClick={() => openEdit(card)}
+                  >
+                    <Pencil className="h-3 w-3" />
                     Editar
                   </Button>
                   <Button
                     variant="outline"
                     size="sm"
+                    className="h-7 px-2 text-xs"
                     onClick={() => toggleActive(card)}
                   >
                     {card.active ? "Desactivar" : "Activar"}

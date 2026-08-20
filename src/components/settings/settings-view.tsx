@@ -181,7 +181,10 @@ export function SettingsView({
                 {gmail.email_address ?? "Cuenta conectada"}
                 <Badge variant="default">Conectado</Badge>
               </p>
-              <p className="text-sm text-muted-foreground">
+              <p
+                className="text-sm text-muted-foreground"
+                suppressHydrationWarning
+              >
                 Última sincronización: {lastSync ?? "nunca"}
               </p>
               <div className="flex flex-wrap gap-2">

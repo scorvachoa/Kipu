@@ -127,6 +127,28 @@ function identifyInstrumentFrom(
     };
   }
 
+  const uniqueCards = resources.cards.filter(
+    (candidate) => candidate.last4 === last4 && candidate.active,
+  );
+  if (uniqueCards.length === 1) {
+    return {
+      cardId: uniqueCards[0].id,
+      accountId: null,
+      personId: uniqueCards[0].owner_person_id,
+    };
+  }
+
+  const uniqueAccounts = resources.accounts.filter(
+    (candidate) => candidate.last4 === last4 && candidate.active,
+  );
+  if (uniqueAccounts.length === 1) {
+    return {
+      cardId: null,
+      accountId: uniqueAccounts[0].id,
+      personId: uniqueAccounts[0].owner_person_id,
+    };
+  }
+
   return null;
 }
 
@@ -373,6 +395,19 @@ export async function processEmail(
 
   if (parsedTransactions.length === 0) {
     parsedTransactions = await parseEmailWithAi(email);
+  } else if (
+    parsedTransactions.some(
+      (transaction) =>
+        !transaction.merchant ||
+        (!transaction.cardLast4 && !transaction.accountLast4),
+    )
+  ) {
+    const aiTransactions = await parseEmailWithAi(email);
+    if (aiTransactions.length === 1) {
+      parsedTransactions = parsedTransactions.map((transaction) =>
+        enrichMissingFields(transaction, aiTransactions[0]),
+      );
+    }
   }
 
   if (parsedTransactions.length === 0) {
@@ -405,4 +440,31 @@ export async function processEmail(
 
 export function instrumentKey(bank: BankingBank, last4: string): string {
   return `${bank}:${last4}`;
+}
+
+export function enrichMissingFields(
+  parsed: ParsedTransaction,
+  ai: ParsedTransaction,
+): ParsedTransaction {
+  if (
+    Math.abs(parsed.amount - ai.amount) > 0.01 ||
+    parsed.transactionDate !== ai.transactionDate
+  ) {
+    return parsed;
+  }
+  const enriched = { ...parsed };
+  if (!enriched.merchant && ai.merchant) {
+    enriched.merchant = ai.merchant;
+  }
+  if (!enriched.cardLast4 && !enriched.accountLast4) {
+    if (ai.cardLast4) {
+      enriched.cardLast4 = ai.cardLast4;
+    } else if (ai.accountLast4) {
+      enriched.accountLast4 = ai.accountLast4;
+    }
+  }
+  if (!enriched.operationNumber && ai.operationNumber) {
+    enriched.operationNumber = ai.operationNumber;
+  }
+  return enriched;
 }

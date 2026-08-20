@@ -14,6 +14,7 @@ import {
   extractTime,
   last4AfterLabels,
   maskedLast4,
+  merchantFromSubject,
   parseAmountCurrency,
   valueAfterLabels,
 } from "./support";
@@ -64,6 +65,20 @@ export const interbankParser: BankEmailParser = {
       return [];
     }
 
+    const accountLast4 = last4AfterLabels(fragments, [
+      "Cuenta a cargo",
+      "Cuenta cargo",
+    ]);
+    const cardLabelLast4 = last4AfterLabels(fragments, [
+      "Tarjeta de crédito",
+      "Tarjeta de credito",
+      "Tarjeta de débito",
+      "Tarjeta de debito",
+      "Tarjeta",
+    ]);
+    const cardLast4 =
+      cardLabelLast4 ?? (accountLast4 ? undefined : maskedLast4(fragments));
+
     return [
       {
         bank: INTERBANK_BANK,
@@ -73,12 +88,14 @@ export const interbankParser: BankEmailParser = {
         currency: amountInfo.currency,
         transactionDate,
         transactionTime,
-        accountLast4: last4AfterLabels(fragments, [
-          "Cuenta a cargo",
-          "Cuenta cargo",
-        ]),
-        cardLast4: maskedLast4(fragments),
-        merchant: valueAfterLabels(fragments, ["Comercio", "Empresa"]),
+        accountLast4,
+        cardLast4,
+        merchant:
+          valueAfterLabels(fragments, [
+            "Comercio",
+            "Empresa",
+            "Establecimiento",
+          ]) ?? merchantFromSubject(email.subject),
         operationNumber: valueAfterLabels(fragments, [
           "Código de operación",
         ]),

@@ -199,6 +199,28 @@ export function extractLast4(value: string): string | undefined {
   return digits.length >= 4 ? digits.slice(-4) : undefined;
 }
 
+const SUBJECT_UNUSEFUL = /\b(tu|tarjeta|cuenta|credito|debito|bcp|interbank|consumo|compra|alerta|aviso|movimiento|operacion)\b/i;
+
+export function merchantFromSubject(
+  subject: string | undefined,
+): string | undefined {
+  if (!subject) {
+    return undefined;
+  }
+  const normalized = subject.replace(/\s+/g, " ").trim().slice(0, 200);
+  const match = normalized.match(
+    /\ben\s+(.+?)(?:\s+(?:por|de|del|la|el|con|S\/|US\$|USD|EUR)|\s*$)/i,
+  );
+  if (!match) {
+    return undefined;
+  }
+  const merchant = match[1].replace(/[.,:;-]+$/, "").trim();
+  if (merchant.length < 2 || SUBJECT_UNUSEFUL.test(merchant)) {
+    return undefined;
+  }
+  return merchant;
+}
+
 function labelMatches(fragment: string, label: string): boolean {
   const current = canonical(fragment);
   const normalized = canonical(label);
@@ -263,16 +285,35 @@ export function last4AfterLabels(
 export function maskedLast4(fragments: string[]): string | undefined {
   for (const fragment of fragments) {
     const trimmed = fragment.trim();
-    if (
-      !/^[\d*\s]+$/.test(trimmed) ||
-      (trimmed.match(/\*/g) ?? []).length < 2
-    ) {
+    if (!trimmed || trimmed.includes("@")) {
       continue;
     }
-    const digits = trimmed.replace(/\D/g, "");
-    if (digits.length >= 4) {
-      return digits.slice(-4);
+
+    if (maskedCardPattern.test(trimmed)) {
+      const captured = extractMaskedGroup(trimmed);
+      if (captured) {
+        return captured;
+      }
+    }
+
+    if (/^[\d*\s]+$/.test(trimmed) && (trimmed.match(/\*/g) ?? []).length >= 2) {
+      const digits = trimmed.replace(/\D/g, "");
+      if (digits.length >= 4) {
+        return digits.slice(-4);
+      }
     }
   }
   return undefined;
+}
+
+const maskedCardPattern =
+  /(?:\*\s*){2,}\s*\d{4,}|(?:\d{4,}\s*)(?:\*\s*){2,}/i;
+
+function extractMaskedGroup(value: string): string | undefined {
+  const mask = value.match(/(?:\*\s*){2,}[^*\d]*(\d{4,})/);
+  if (mask && mask[1].length >= 4) {
+    return mask[1].slice(-4);
+  }
+  const digits = value.replace(/\D/g, "");
+  return digits.length >= 4 ? digits.slice(-4) : undefined;
 }

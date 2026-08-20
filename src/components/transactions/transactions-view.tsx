@@ -3,7 +3,7 @@
 import { useCallback, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Download, Search, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Download, Search, X } from "lucide-react";
 import { formatMoney, formatDateTime, monthOptions, cardNameWithLast4 } from "@/lib/format";
 import { CategoryIcon } from "@/components/category-icon";
 import { monthLabel } from "@/lib/finance/summary";
@@ -111,6 +111,112 @@ function SuggestRuleButton({
   );
 }
 
+function PaginationControls({
+  page,
+  pageSize,
+  totalPages,
+  total,
+  start,
+  pageSizeOptions,
+  pageItems,
+  onChangePage,
+  onChangeSize,
+  showSize = true,
+  showPager = true,
+}: {
+  page: number;
+  pageSize: number;
+  totalPages: number;
+  total: number;
+  start: number;
+  pageSizeOptions: string[];
+  pageItems: Array<number | "…">;
+  onChangePage: (page: number) => void;
+  onChangeSize: (size: string) => void;
+  showSize?: boolean;
+  showPager?: boolean;
+}) {
+  return (
+    <div
+      className={`flex flex-wrap items-center gap-3 ${
+        showPager ? "justify-between" : "justify-end"
+      }`}
+    >
+      {showPager ? (
+        <p className="text-xs text-muted-foreground">
+          Mostrando{" "}
+          <span className="font-medium text-foreground">
+            {total === 0 ? 0 : start + 1}–
+            {Math.min(start + pageSize, total)}
+          </span>{" "}
+          de <span className="font-medium text-foreground">{total}</span>
+        </p>
+      ) : null}
+      <div className="flex flex-wrap items-center gap-2">
+        {showSize ? (
+          <Select
+            value={String(pageSize)}
+            onValueChange={(size) => onChangeSize(size)}
+          >
+            <SelectTrigger className="h-9 w-[110px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {pageSizeOptions.map((option) => (
+                <SelectItem key={option} value={option}>
+                  {option} filas
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ) : null}
+        {showPager ? (
+          <div className="flex items-center gap-1">
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8"
+              disabled={page <= 1}
+              onClick={() => onChangePage(page - 1)}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            {pageItems.map((item, index) =>
+              item === "…" ? (
+                <span
+                  key={`ellipsis-${index}`}
+                  className="px-1 text-xs text-muted-foreground"
+                >
+                  …
+                </span>
+              ) : (
+                <Button
+                  key={item}
+                  variant={item === page ? "default" : "outline"}
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => onChangePage(item)}
+                >
+                  {item}
+                </Button>
+              ),
+            )}
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8"
+              disabled={page >= totalPages}
+              onClick={() => onChangePage(page + 1)}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 export function TransactionsView({
   rows,
   cards,
@@ -152,12 +258,15 @@ export function TransactionsView({
   }
 
   const update = useCallback(
-    (key: string, value: string) => {
+    (key: string, value: string, resetPage = true) => {
       const params = new URLSearchParams(searchParams.toString());
       if (value) {
         params.set(key, value);
       } else {
         params.delete(key);
+      }
+      if (resetPage && key !== "page") {
+        params.delete("page");
       }
       router.replace(`${pathname}?${params.toString()}`);
     },
@@ -179,6 +288,42 @@ export function TransactionsView({
     setSearch("");
     router.replace(pathname);
   }
+
+  const pageSizeOptions = ["10", "20", "50", "100"];
+  const rawPageSize = searchParams.get("size") ?? "";
+  const pageSize = pageSizeOptions.includes(rawPageSize)
+    ? Number(rawPageSize)
+    : 10;
+  const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
+  const rawPage = Number(searchParams.get("page") ?? "1");
+  const page =
+    Number.isFinite(rawPage) && rawPage >= 1
+      ? Math.min(Math.floor(rawPage), totalPages)
+      : 1;
+  const start = (page - 1) * pageSize;
+  const pageRows = rows.slice(start, start + pageSize);
+
+  function pageItems(): Array<number | "…"> {
+    if (totalPages <= 5) {
+      return Array.from({ length: totalPages }, (_, i) => i + 1);
+    }
+    const items: Array<number | "…"> = [1];
+    const startWindow = Math.max(2, page - 1);
+    const endWindow = Math.min(totalPages - 1, page + 1);
+    if (startWindow > 2) {
+      items.push("…");
+    }
+    for (let p = startWindow; p <= endWindow; p++) {
+      items.push(p);
+    }
+    if (endWindow < totalPages - 1) {
+      items.push("…");
+    }
+    items.push(totalPages);
+    return items;
+  }
+
+  const showPagination = pageRows.length > 0;
 
   return (
     <div className="space-y-4">
@@ -317,6 +462,20 @@ export function TransactionsView({
         </Card>
       ) : (
         <>
+          {showPagination ? (
+            <PaginationControls
+              page={page}
+              pageSize={pageSize}
+              totalPages={totalPages}
+              total={rows.length}
+              start={start}
+              pageSizeOptions={pageSizeOptions}
+              pageItems={pageItems()}
+              onChangePage={(next) => update("page", String(next))}
+              onChangeSize={(size) => update("size", size)}
+              showPager={false}
+            />
+          ) : null}
           <div className="hidden sm:block">
             <Card>
               <CardContent className="p-0">
@@ -332,7 +491,7 @@ export function TransactionsView({
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {rows.map((t) => (
+                    {pageRows.map((t) => (
                       <TableRow key={t.id}>
                         <TableCell className="whitespace-nowrap text-sm">
                           {formatDateTime(t.transaction_date, t.transaction_time)}
@@ -415,7 +574,7 @@ export function TransactionsView({
           </div>
 
           <div className="grid gap-3 sm:hidden">
-            {rows.map((t) => (
+            {pageRows.map((t) => (
               <Card key={t.id}>
                 <CardHeader className="p-4 pb-2">
                   <div className="flex items-center justify-between gap-2">
@@ -467,6 +626,21 @@ export function TransactionsView({
               </Card>
             ))}
           </div>
+
+          {showPagination ? (
+            <PaginationControls
+              page={page}
+              pageSize={pageSize}
+              totalPages={totalPages}
+              total={rows.length}
+              start={start}
+              pageSizeOptions={pageSizeOptions}
+              pageItems={pageItems()}
+              onChangePage={(next) => update("page", String(next))}
+              onChangeSize={(size) => update("size", size)}
+              showSize={false}
+            />
+          ) : null}
         </>
       )}
     </div>

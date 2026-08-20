@@ -19,6 +19,53 @@ import { GoogleIcon } from "@/components/auth/google-icon";
 
 type Mode = "login" | "register";
 
+function friendlyAuthError(message: string): string {
+  const msg = (message ?? "").toLowerCase();
+  if (
+    msg.includes("missing email or phone") ||
+    msg.includes("email missing") ||
+    msg.includes("a valid email address is required") ||
+    msg.includes("invalid format") ||
+    msg.includes("invalid email")
+  ) {
+    return "Ingresa un correo válido para continuar.";
+  }
+  if (msg.includes("invalid login credentials")) {
+    return "Correo o contraseña incorrectos.";
+  }
+  if (msg.includes("email not confirmed") || msg.includes("email not verified")) {
+    return "Tu correo aún no está confirmado. Revisa tu bandeja de entrada.";
+  }
+  if (msg.includes("already registered") || msg.includes("user already registered")) {
+    return "Ya existe una cuenta con ese correo. Inicia sesión.";
+  }
+  if (
+    msg.includes("password should be") ||
+    msg.includes("at least 6 characters") ||
+    msg.includes("password is too short")
+  ) {
+    return "La contraseña debe tener al menos 6 caracteres.";
+  }
+  if (
+    msg.includes("too many requests") ||
+    msg.includes("once every 60 seconds") ||
+    msg.includes("rate limit") ||
+    msg.includes("request was throttled")
+  ) {
+    return "Demasiados intentos. Espera un momento e inténtalo de nuevo.";
+  }
+  if (msg.includes("invalid jwt") || msg.includes("token has expired")) {
+    return "Tu sesión expiró. Inicia sesión de nuevo.";
+  }
+  if (msg.includes("network") || msg.includes("failed to fetch")) {
+    return "Error de conexión. Inténtalo de nuevo.";
+  }
+  if (msg.includes("new password should be different")) {
+    return "La nueva contraseña debe ser diferente de la anterior.";
+  }
+  return "No se pudo completar la acción. Inténtalo de nuevo.";
+}
+
 export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -53,6 +100,18 @@ export function LoginForm() {
     setError(null);
     setNotice(null);
 
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail) {
+      setError("Ingresa tu correo para continuar.");
+      setLoading(false);
+      return;
+    }
+    if (!password) {
+      setError("Ingresa tu contraseña.");
+      setLoading(false);
+      return;
+    }
+
     if (mode === "register" && password !== passwordConfirm) {
       setError("Las contraseñas no coinciden.");
       setLoading(false);
@@ -61,11 +120,11 @@ export function LoginForm() {
 
     if (mode === "login") {
       const { error: signInError } = await supabase.auth.signInWithPassword({
-        email,
+        email: trimmedEmail,
         password,
       });
       if (signInError) {
-        setError(signInError.message);
+        setError(friendlyAuthError(signInError.message));
         setLoading(false);
         return;
       }
@@ -75,14 +134,14 @@ export function LoginForm() {
     }
 
     const { data, error: signUpError } = await supabase.auth.signUp({
-      email,
+      email: trimmedEmail,
       password,
       options: {
         emailRedirectTo: `${window.location.origin}/auth/callback`,
       },
     });
     if (signUpError) {
-      setError(signUpError.message);
+      setError(friendlyAuthError(signUpError.message));
       setLoading(false);
       return;
     }
@@ -111,7 +170,7 @@ export function LoginForm() {
       options: { redirectTo: `${window.location.origin}/auth/callback` },
     });
     if (oauthError) {
-      setError(oauthError.message);
+      setError(friendlyAuthError(oauthError.message));
       setLoading(false);
     }
   }

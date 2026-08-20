@@ -308,15 +308,15 @@ export async function parseEmailWithAi(
     '  "currency": "PEN | USD | EUR",',
     '  "transactionDate": "YYYY-MM-DD",',
     '  "transactionTime": "HH:MM (24h, opcional)",',
-    '  "merchant": "nombre del comercio o contraparte (opcional)",',
-    '  "cardLast4": "últimos 4 dígitos de tarjeta (opcional)",',
-    '  "accountLast4": "últimos 4 dígitos de cuenta (opcional)",',
+    '  "merchant": "comercio o contraparte, casi siempre está presente: búscalo en el asunto (suele ir tras la palabra \\"en\\" o \\"por\\") y en el cuerpo bajo etiquetas como Empresa, Comercio, Establecimiento, Negocio",',
+    '  "cardLast4": "últimos 4 dígitos de la tarjeta (suele aparecer enmascarada como ****1234 o ************8795)",',
+    '  "accountLast4": "últimos 4 dígitos de la cuenta (opcional)",',
     '  "transactionType": "purchase | payment | transfer | withdrawal | refund | fee | income | other",',
     '  "paymentMethod": "credit_card | debit_card | bank_account | unknown",',
     '  "operationNumber": "número de operación (opcional)"',
     "}",
     "",
-    "No uses markdown. Si no puedes extraer algo, devuelve null en los campos opcionales. Si el correo no es una transacción válida, devuelve un objeto con amount en 0.",
+    "No uses markdown. Si no puedes extraer algo, devuelve null en los campos opcionales. No inventes el comercio: si aparece, extráelo tal cual; si de verdad no está, devuelve null. Si el correo no es una transacción válida, devuelve un objeto con amount en 0.",
   ].join("\n");
 
   const schema = {

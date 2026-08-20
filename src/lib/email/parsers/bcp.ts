@@ -11,6 +11,7 @@ import {
   extractTextFragments,
   extractTime,
   maskedLast4,
+  merchantFromSubject,
   valueAfterLabels,
 } from "./support";
 
@@ -73,7 +74,7 @@ export const bcpParser: BankEmailParser = {
       return [];
     }
 
-    const merchant = merchantFor(kind, fragments);
+    const merchant = merchantFor(kind, fragments, email.subject);
     const cardLast4 = maskedLast4(fragments);
 
     return [
@@ -119,7 +120,11 @@ function paymentMethodFor(kind: BcpEmailKind, fullText: string): PaymentMethod {
   return detectBcpPaymentMethod(fullText);
 }
 
-function merchantFor(kind: BcpEmailKind, fragments: string[]): string | undefined {
+function merchantFor(
+  kind: BcpEmailKind,
+  fragments: string[],
+  subject?: string,
+): string | undefined {
   if (kind === "yapeo") {
     return valueAfterLabels(fragments, ["Enviado por"]);
   }
@@ -129,7 +134,15 @@ function merchantFor(kind: BcpEmailKind, fragments: string[]): string | undefine
   if (kind === "wardaditoRetiro") {
     return valueAfterLabels(fragments, ["Origen"]);
   }
-  return valueAfterLabels(fragments, ["Empresa"]);
+  const fromBody = valueAfterLabels(fragments, [
+    "Empresa",
+    "Comercio",
+    "Establecimiento",
+  ]);
+  if (fromBody) {
+    return fromBody;
+  }
+  return merchantFromSubject(subject);
 }
 
 export function detectBcpTransactionType(fullText: string): TransactionType {

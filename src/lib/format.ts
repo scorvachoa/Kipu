@@ -71,6 +71,7 @@ export function formatLastSync(lastSyncAt: string | null): string | null {
   const date = new Date(lastSyncAt);
   if (Number.isNaN(date.getTime())) return null;
   return date.toLocaleString("es-PE", {
+    timeZone: "America/Lima",
     day: "2-digit",
     month: "short",
     hour: "2-digit",
